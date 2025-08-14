@@ -1,0 +1,46 @@
+{
+  "cli": {
+    "version": ">= 16.0.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "development-ios": {
+      "developmentClient": true,
+      "distribution": "store",
+      "ios": {
+        "simulator": false
+      },
+      "autoIncrement": true
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store"
+    },
+    "production-ios": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "releaseChannel": "production"
+    },
+    "ios-simulator": {
+      "ios": {
+        "simulator": true
+      }
+    }
+  },
+  "submit": {
+    "production": {},
+    "development-ios": {
+      "ios": {
+        "appleId": "reardenjohn@gmail.com",
+        "ascAppId": "6743771915"
+      }
+    }
+  }
+}
