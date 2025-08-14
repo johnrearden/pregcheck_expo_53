@@ -1,7 +1,7 @@
-import React, { Text, View, StyleSheet } from "react-native";
+import { HEATMAP_COLORS } from "@/constants/constants";
 import { useTheme } from "@/hooks/useTheme";
 import { useState } from "react";
-import { HEATMAP_COLORS } from "@/constants/constants";
+import React, { StyleSheet, Text, View } from "react-native";
 
 export interface YearCalendarProps {
     year: number,

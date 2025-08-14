@@ -33,7 +33,10 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      "react-native-google-mobile-ads"
     ],
     "experiments": {
       "typedRoutes": true
