@@ -1,0 +1,270 @@
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import {
+    storeToken, clearTokens, API_URL, getStoredToken
+} from '../utilities/AuthUtils';
+import { useRouter } from 'expo-router';
+import { Alert } from 'react-native';
+
+
+export interface AuthContextType {
+    login: (username: string, password: string) => Promise<any>;
+    register: (
+        username: string,
+        email: string,
+        password1: string,
+        password2: string) => Promise<any>;
+    logout: () => Promise<void>;
+    authenticated: boolean;
+    requestPasswordReset: (email: string) => Promise<any>;
+    confirmPasswordReset: (email: string, code: string, new_password1: string, new_password2: string) => Promise<any>;
+}
+
+export const AuthContext = createContext<AuthContextType>({
+    login: async () => { },
+    register: async () => { },
+    logout: async () => { },
+    authenticated: false,
+    requestPasswordReset: async () => { },
+    confirmPasswordReset: async () => { },
+});
+
+interface AuthProviderProps {
+    children: React.ReactNode;
+}
+
+
+// AuthProvider component that provides authentication context to the application
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+
+    const [authenticated, setAuthenticated] = useState(false);
+
+    useEffect(() => {
+        //clearTokens();
+        const checkForToken = async () => {
+            const token = await getStoredToken();
+            if (token) {
+                setAuthenticated(true);
+                console.log('Token found:', token);
+            } else {
+                console.log('No token found in storage, redirecting to login');
+                console.log('to login');
+
+                // Horrible hack to ensure the router is ready
+                // before redirecting
+                setTimeout(() => {
+                    router.replace('/login');
+                }, 500);
+
+            }
+        }
+        checkForToken();
+    }, []);
+
+    const login = async (username: string, password: string) => {
+        try {
+            const response = await fetch(`${API_URL}dj-rest-auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
+            if (!response.ok) {
+                throw new Error('Login failed');
+            }
+
+            const data = await response.json();
+            setIsLoading(false);
+            setAuthenticated(true);
+            await storeToken(data.key);
+            return data.user;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    const register = async (
+        username: string,
+        email: string,
+        password1: string,
+        password2: string) => {
+        try {
+            const response = await fetch(`${API_URL}dj-rest-auth/registration/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, email, password1, password2 }),
+            });
+
+            console.log('Registration response status:', response.status);
+            console.log('Response.ok:', response.ok);
+            console.log('Response :', response);
+
+            if (!response.ok) {
+                // For HTTP error status codes (400, 500, etc.)
+                const contentType = response.headers.get('content-type');
+
+                // If the server returned a JSON response, it's likely validation errors
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    // Mark this as a validation error
+                    errorData._isValidationError = true;
+                    throw errorData;
+                } else {
+                    // Not a JSON response, likely a server error
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status}. ${errorText}`);
+                }
+            }
+
+            const data = await response.json();
+            setIsLoading(false);
+
+            await storeToken(data.key);
+            setAuthenticated(true);
+            return data;
+        } catch (error) {
+            console.error('Registration error:', error);
+            // If this is not a validation error from the backend
+            if (!(typeof error === 'object' && error !== null && '_isValidationError' in error)) {
+                Alert.alert(
+                    'Connection Error',
+                    'Unable to connect to the server. Please check your internet connection and try again.',
+                    [{ text: 'OK', onPress: () => console.log('Network error acknowledged') }]
+                );
+            }
+                throw error;
+        }
+    };
+
+    const requestPasswordReset = async (email: string) => {
+        try {
+            const response = await fetch(`${API_URL}custom_auth/password_reset/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(
+                    errorData.email?.[0] ||
+                    'Password reset request failed. Please try again.'
+                );
+            }
+
+            // Handle 204 No Content response (success with no response body)
+            if (response.status === 204) {
+                return { success: true, message: 'Password reset email sent successfully.' };
+            }
+
+            // For other successful responses that might have content
+            try {
+                const data = await response.json();
+                return data;
+            } catch (e) {
+                // If JSON parsing fails, still return success
+                return { success: true, message: 'Password reset email sent successfully.' };
+            }
+        } catch (error) {
+            console.error('Password reset error:', error);
+            throw error;
+        }
+    };
+
+    const isUserAuthenticated = async () => {
+        try {
+            const token = await getStoredToken();
+            if (!token) {
+                console.log('No token found, user is not authenticated');
+                setAuthenticated(false);
+                return false;
+            }
+            setAuthenticated(true);
+            return true;
+        } catch (error) {
+            console.error('Error checking authentication:', error);
+            return false;
+        }
+    };
+
+
+    const confirmPasswordReset = async (email: string, code: string, new_password1: string, new_password2: string) => {
+        try {
+            const response = await fetch(`${API_URL}custom_auth/password_reset/confirm/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    code,
+                    new_password1,
+                    new_password2
+                }),
+            });
+
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    let errorMessage = 'Password reset failed. Please try again.';
+
+                    if (errorData.email) {
+                        errorMessage = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
+                    } else if (errorData.code) {
+                        errorMessage = Array.isArray(errorData.code) ? errorData.code[0] : errorData.code;
+                    } else if (errorData.new_password1) {
+                        errorMessage = Array.isArray(errorData.new_password1) ? errorData.new_password1[0] : errorData.new_password1;
+                    } else if (errorData.new_password2) {
+                        errorMessage = Array.isArray(errorData.new_password2) ? errorData.new_password2[0] : errorData.new_password2;
+                    } else if (errorData.non_field_errors) {
+                        errorMessage = Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors;
+                    }
+
+                    throw new Error(errorMessage);
+                } else {
+                    const textResponse = await response.text();
+                    console.error('Non-JSON error response:', textResponse);
+                    throw new Error('Password reset failed. Please try again.');
+                }
+            }
+
+            const data = await response.json();
+
+            // If the backend returns an auth token, store it
+            if (data.key || data.token) {
+                const authToken = data.key || data.token;
+                await storeToken(authToken);
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Password reset confirmation error:', error);
+            throw error;
+        }
+    };
+
+    const logout = async () => {
+        await clearTokens();
+        setAuthenticated(false);
+        router.replace('/login');
+    };
+
+    return (
+        <AuthContext.Provider value={{
+            login, register, logout, requestPasswordReset, confirmPasswordReset, authenticated
+        }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = () => useContext(AuthContext);

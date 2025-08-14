@@ -1,50 +1,70 @@
-# Welcome to your Expo app 👋
+### EAS Ops
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+#### Android preview apk (internal distribution)
 
-## Get started
+```eas build --platform android --profile preview```
 
-1. Install dependencies
+#### Android ejected development build
 
-   ```bash
-   npm install
-   ```
+```eas build -p android --profile development```
 
-2. Start the app
+```npx expo start --dev-client -c```
 
-   ```bash
-   npx expo start
-   ```
+#### Ios ejected development build
 
-In the output, you'll find options to open the app in a
+```eas build --platform ios --profile development-ios```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+This requires a "
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+#### Android production aab (Play Store Internal Testing Track)
+```eas build --platform android --profile production```
 
-## Get a fresh project
+#### Ios production .ipa (App Store TestFlight)
+```eas build -p ios --profile production-ios```
 
-When you're ready, run:
+- and to submit to AppStoreConnect : 
+    - ```eas submit --platform ios```
 
-```bash
-npm run reset-project
-```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+#### Google Admob test ids
+- Banner
+    - ca-app-pub-3940256099942544/6300978111
 
-## Learn more
+- Interstitial
+    - ca-app-pub-3940256099942544/1033173712
 
-To learn more about developing your project with Expo, look at the following resources:
+#### react-native-google-mobile-ads build breaker
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Use 14.7.2 [stackoverflow](https://stackoverflow.com/questions/77433573/react-native-google-ads-kotlin-compile-error/79558626#79558626)
 
-## Join the community
+### Android USB debugging
 
-Join our community of developers creating universal apps.
+# 1 Plug the phone in, confirm “USB debugging”
+adb devices         # should list your device as "device", not "unauthorized"
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# 2 Clear old noise
+adb logcat -c
+
+# 3 Start the app on the phone, then in another terminal run:
+adb logcat  |  grep --line-buffered -E "pregcheck|AndroidRuntime|CRASH"
+
+### Build release variant for android emulator to run e2e tests:
+
+npx expo run:android --variant release
+
+
+# Production Deployment Checklist
+
+- [ ] Connected to pregcheck.ai for API requests
+- [ ] Unposted record check interval > 1 minute
+- [ ] Live ads
+- [ ] Live emails
+- [ ] USE_SERVER_POSTGRES = True
+
+
+### Store keywords
+
+pregcheck, livestock management, herd management, farm management, pregnancy scan, veterinary scan, cow pregnancy, sheep pregnancy, goat pregnancy, scan results, animal husbandry, calf weight tracking, herd health, vet reporting, scan summary, PDF report, CSV export, email report, dairy farm, small ruminants, cattle herd, sheep flock, goat herd, pregnancy tracking, farm data, offline livestock records, vet record keeping
+
+
+
