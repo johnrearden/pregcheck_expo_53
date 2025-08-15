@@ -1,4 +1,4 @@
-package com.johnrearden.pregcheck_expo_53
+package com.intricatech.pregcheck
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

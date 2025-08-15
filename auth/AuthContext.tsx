@@ -1,10 +1,12 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import {
-    storeToken, clearTokens, API_URL, getStoredToken
-} from '../utilities/AuthUtils';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-
+import {
+    API_URL,
+    clearTokens,
+    getStoredToken,
+    storeToken
+} from '../utilities/AuthUtils';
 
 export interface AuthContextType {
     login: (username: string, password: string) => Promise<any>;
@@ -17,6 +19,7 @@ export interface AuthContextType {
     authenticated: boolean;
     requestPasswordReset: (email: string) => Promise<any>;
     confirmPasswordReset: (email: string, code: string, new_password1: string, new_password2: string) => Promise<any>;
+    isLoading: boolean; // Add this to help with loading states
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -26,42 +29,55 @@ export const AuthContext = createContext<AuthContextType>({
     authenticated: false,
     requestPasswordReset: async () => { },
     confirmPasswordReset: async () => { },
+    isLoading: true,
 });
 
 interface AuthProviderProps {
     children: React.ReactNode;
 }
 
-
 // AuthProvider component that provides authentication context to the application
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
-
     const [authenticated, setAuthenticated] = useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
-        //clearTokens();
         const checkForToken = async () => {
-            const token = await getStoredToken();
-            if (token) {
-                setAuthenticated(true);
-                console.log('Token found:', token);
-            } else {
-                console.log('No token found in storage, redirecting to login');
-                console.log('to login');
+            try {
+                const token = await getStoredToken();
+                if (token) {
+                    setAuthenticated(true);
+                    console.log('Token found:', token);
+                } else {
+                    console.log('No token found in storage');
+                    setAuthenticated(false);
+                    
+                    // Only redirect to login if not already on auth pages
+                    if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
+                        router.replace('/login');
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking token:', error);
+                setAuthenticated(false);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-                // Horrible hack to ensure the router is ready
-                // before redirecting
-                setTimeout(() => {
-                    router.replace('/login');
-                }, 500);
+        checkForToken();
+    }, [pathname]);
 
+    // Separate effect to handle redirects based on auth state
+    useEffect(() => {
+        if (!isLoading) {
+            if (!authenticated && pathname !== '/login' && pathname !== '/register') {
+                router.replace('/login');
             }
         }
-        checkForToken();
-    }, []);
+    }, [authenticated, isLoading, pathname]);
 
     const login = async (username: string, password: string) => {
         try {
@@ -77,7 +93,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
 
             const data = await response.json();
-            setIsLoading(false);
             setAuthenticated(true);
             await storeToken(data.key);
             return data.user;
@@ -102,34 +117,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             console.log('Registration response status:', response.status);
             console.log('Response.ok:', response.ok);
-            console.log('Response :', response);
 
             if (!response.ok) {
-                // For HTTP error status codes (400, 500, etc.)
                 const contentType = response.headers.get('content-type');
 
-                // If the server returned a JSON response, it's likely validation errors
                 if (contentType && contentType.includes('application/json')) {
                     const errorData = await response.json();
-                    // Mark this as a validation error
                     errorData._isValidationError = true;
                     throw errorData;
                 } else {
-                    // Not a JSON response, likely a server error
                     const errorText = await response.text();
                     throw new Error(`Server error: ${response.status}. ${errorText}`);
                 }
             }
 
             const data = await response.json();
-            setIsLoading(false);
-
             await storeToken(data.key);
             setAuthenticated(true);
             return data;
         } catch (error) {
             console.error('Registration error:', error);
-            // If this is not a validation error from the backend
             if (!(typeof error === 'object' && error !== null && '_isValidationError' in error)) {
                 Alert.alert(
                     'Connection Error',
@@ -137,7 +144,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     [{ text: 'OK', onPress: () => console.log('Network error acknowledged') }]
                 );
             }
-                throw error;
+            throw error;
         }
     };
 
@@ -159,17 +166,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 );
             }
 
-            // Handle 204 No Content response (success with no response body)
             if (response.status === 204) {
                 return { success: true, message: 'Password reset email sent successfully.' };
             }
 
-            // For other successful responses that might have content
             try {
                 const data = await response.json();
                 return data;
             } catch (e) {
-                // If JSON parsing fails, still return success
                 return { success: true, message: 'Password reset email sent successfully.' };
             }
         } catch (error) {
@@ -177,23 +181,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             throw error;
         }
     };
-
-    const isUserAuthenticated = async () => {
-        try {
-            const token = await getStoredToken();
-            if (!token) {
-                console.log('No token found, user is not authenticated');
-                setAuthenticated(false);
-                return false;
-            }
-            setAuthenticated(true);
-            return true;
-        } catch (error) {
-            console.error('Error checking authentication:', error);
-            return false;
-        }
-    };
-
 
     const confirmPasswordReset = async (email: string, code: string, new_password1: string, new_password2: string) => {
         try {
@@ -239,7 +226,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             const data = await response.json();
 
-            // If the backend returns an auth token, store it
             if (data.key || data.token) {
                 const authToken = data.key || data.token;
                 await storeToken(authToken);
@@ -260,7 +246,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{
-            login, register, logout, requestPasswordReset, confirmPasswordReset, authenticated
+            login, 
+            register, 
+            logout, 
+            requestPasswordReset, 
+            confirmPasswordReset, 
+            authenticated,
+            isLoading
         }}>
             {children}
         </AuthContext.Provider>

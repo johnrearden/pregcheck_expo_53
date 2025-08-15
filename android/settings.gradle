@@ -31,7 +31,7 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'pregcheck_expo_53'
+rootProject.name = 'Pregcheck'
 
 expoAutolinking.useExpoVersionCatalog()
 

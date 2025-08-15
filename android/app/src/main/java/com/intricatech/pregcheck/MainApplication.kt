@@ -1,4 +1,4 @@
-package com.johnrearden.pregcheck_expo_53
+package com.intricatech.pregcheck
 
 import android.app.Application
 import android.content.res.Configuration

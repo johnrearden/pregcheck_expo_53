@@ -87,13 +87,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.johnrearden.pregcheck_expo_53'
+    namespace 'com.intricatech.pregcheck'
     defaultConfig {
-        applicationId 'com.johnrearden.pregcheck_expo_53'
+        applicationId 'com.intricatech.pregcheck'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0.0"
+        versionName "1.1.0"
     }
     signingConfigs {
         debug {
