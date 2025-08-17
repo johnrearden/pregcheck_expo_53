@@ -1,7 +1,7 @@
 import { useContext } from 'react';
+import { StyleSheet } from 'react-native';
 import { ThemeContext } from '../contexts/ThemeContext';
 import { themes } from '../styles/theme';
-import { StyleSheet } from 'react-native';
 
 
 export function useTheme() {
@@ -104,7 +104,7 @@ export function useTheme() {
       borderRadius: 10, // Must be applied here for iOS shadows
     }, 
     navbar: {
-      height: 110,
+      height: 90,
       width: '100%',
       backgroundColor: colors.scndColor,
       display: 'flex',

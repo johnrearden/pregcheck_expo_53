@@ -4,6 +4,7 @@ import { RecordSyncProvider } from '@/contexts/RecordSyncContext';
 import { StatsProvider } from '@/contexts/StatsContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { WeightRecordProvider } from "@/contexts/WeightRecordContext";
+import { useTheme } from '@/hooks/useTheme';
 import { migrateDBifNeeded } from "@/utilities/DatabaseUtils";
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -12,11 +13,15 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthProvider } from "../auth/AuthContext";
 import { initializeAds } from '../services/adService';
 
 // Create a separate component for handling auth routing
 function AuthenticatedApp() {
+
+  const { colors } = useTheme();
+
   return (
     <SQLiteProvider databaseName="pregcheck_db" onInit={migrateDBifNeeded}>
       <ThemeProvider>
@@ -25,14 +30,20 @@ function AuthenticatedApp() {
             <RecordProvider>
               <WeightRecordProvider>
                 <RecordSyncProvider>
-                  <Stack screenOptions={{
-                    headerShown: false,
-                    gestureEnabled: true,
-                    gestureDirection: 'horizontal'
+                  <StatusBar style="light" backgroundColor={colors.brgtColor} />
+                  <SafeAreaView style={{
+                    flex: 1,
+                    backgroundColor: colors.brgtColor,
                   }}>
-                    {/* Stack will automatically render the appropriate screen based on routes */}
-                  </Stack>
-                  <StatusBar style="light" translucent backgroundColor="transparent" />
+                    <Stack screenOptions={{
+                      headerShown: false,
+                      gestureEnabled: true,
+                      gestureDirection: 'horizontal'
+                    }}>
+                      {/* Stack will automatically render the appropriate screen based on routes */}
+                    </Stack>
+
+                  </SafeAreaView>
                 </RecordSyncProvider>
               </WeightRecordProvider>
             </RecordProvider>

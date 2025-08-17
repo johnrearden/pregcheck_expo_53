@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, FlatList, StyleSheet, ScrollView } from 'react-native';
 import { WeightRecordType } from '@/contexts/WeightRecordContext';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const formatter = new Intl.DateTimeFormat('en-GB', {
     day: '2-digit',
@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
     cell: {
         paddingHorizontal: 6,
         fontSize: 14,
+        color: '#333',
     },
 });
 

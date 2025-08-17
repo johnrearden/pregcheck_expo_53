@@ -1,5 +1,5 @@
-import { Slot, Stack, useRouter } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
 
@@ -23,7 +23,10 @@ export default function ProtectedLayout() {
         return null; // or a loading spinner
     }
     return (
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{
+            headerShown: false,
+            
+        }}>
             <Stack.Screen
                 name="index"
                 options={
