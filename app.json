@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Pregcheck",
-    "slug": "pregcheck_expo_53",
+    "slug": "pregcheck",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -61,7 +61,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "ce10059c-2647-4c1a-b10c-4dfe8840e882"
+        "projectId": "39b4e337-b415-40ce-8e0c-a4067c9f1200"
       }
     }
   }
