@@ -1,6 +1,6 @@
-import { Modal, Text, View } from "react-native";
-import { useTheme } from "@/hooks/useTheme";
 import Button from "@/components/Button";
+import { useTheme } from "@/hooks/useTheme";
+import { Modal, Text, View } from "react-native";
 
 export interface ModalConfirmProps {
     title: string;
@@ -13,7 +13,7 @@ export interface ModalConfirmProps {
 }
 
 const ModalConfirm = (props: ModalConfirmProps) => {
-    const { baseStyle } = useTheme();
+    const { colors, baseStyle } = useTheme();
 
     const { title, message, buttonText, onConfirm, onCancel, 
         modalVisible } = props;
@@ -28,7 +28,7 @@ const ModalConfirm = (props: ModalConfirmProps) => {
             <View style={baseStyle.modal_overlay}>
                 <View style={baseStyle.modal_content}>
                     <Text style={baseStyle.heading_3}>{title}</Text>
-                    <Text>{message}</Text>
+                    <Text style={{ color: colors.fgColor }}>{message}</Text>
                     <View style={{ flexDirection: "row", marginTop: 20 }}>
                         <Button
                             onPress={onCancel}
