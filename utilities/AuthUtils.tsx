@@ -1,10 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
-import { useRouter } from 'expo-router';
 
 type AuthToken = string;
 
-export const API_URL = "https://pregcheck.ai/api/v1/";
-//export const API_URL = "http://192.168.1.6:8000/api/v1/";
+//export const API_URL = "https://pregcheck.ai/api/v1/";
+export const API_URL = "http://192.168.1.6:8000/api/v1/";
 //export const API_URL = "http://172.237.100.205/api/v1/";
 const TOKEN_KEY = 'access';
 
