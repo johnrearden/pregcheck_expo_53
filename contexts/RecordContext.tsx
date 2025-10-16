@@ -383,25 +383,8 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 console.log('[RecordContext] Server session created, ID:', server_session_pk);
 
-                // Loop through the unposted records and update their server pk
-                const newList = [];
-                for (const record of recordList) {
-                    const key = `${record.device_pk}`;
-                    const server_pk = unpostedRecordIds[key];
-                    if (server_pk) {
-                        record.server_pk = server_pk;
-                        record.owner = owner;
-                    }
-                    record.device_session_pk = server_session_pk;
-                    newList.push(record);
-                }
-
-                console.log('[RecordContext] Updating local database with server IDs...');
-                await bulkUpdateRecords(db, newList, server_session_pk);
-                await updateLocalSession(db, server_session_pk, sessionID, recordList.length);
-                console.log('[RecordContext] Local database updated successfully');
-
-                // Request an email summary of the session (non-critical)
+                // Request an email summary of the session IMMEDIATELY (non-critical, independent of DB operations)
+                // This runs BEFORE database operations to ensure DB errors don't prevent email sending
                 try {
                     console.log('[RecordContext] ======================================');
                     console.log('[RecordContext] ENTERING send_pdf_summary block');
@@ -447,6 +430,24 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     console.error("[RecordContext] Exception stringified:", JSON.stringify(emailError, null, 2));
                     console.error("[RecordContext] ======================================");
                 }
+
+                // Loop through the unposted records and update their server pk
+                const newList = [];
+                for (const record of recordList) {
+                    const key = `${record.device_pk}`;
+                    const server_pk = unpostedRecordIds[key];
+                    if (server_pk) {
+                        record.server_pk = server_pk;
+                        record.owner = owner;
+                    }
+                    record.device_session_pk = server_session_pk;
+                    newList.push(record);
+                }
+
+                console.log('[RecordContext] Updating local database with server IDs...');
+                await bulkUpdateRecords(db, newList, server_session_pk);
+                await updateLocalSession(db, server_session_pk, sessionID, recordList.length);
+                console.log('[RecordContext] Local database updated successfully');
             } else if (response.offline) {
                 console.log('[RecordContext] Offline - session will sync later');
                 showToast('You are offline. Session will be synchronized when connectivity is restored.', 'warning');
