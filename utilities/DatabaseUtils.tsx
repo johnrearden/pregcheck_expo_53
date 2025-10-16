@@ -169,8 +169,8 @@ export const addDueDateColumn = async (db: SQLite.SQLiteDatabase) => {
 export const isDatabaseAccessible = async (db: SQLite.SQLiteDatabase): Promise<boolean> => {
     try {
         // Simple query to test connection
-        await db.getFirstAsync('SELECT 1');
-        return true;
+        const result = await db.getFirstAsync<{ result: number }>('SELECT 1 as result');
+        return result?.result === 1;
     } catch (error) {
         console.error('[DatabaseUtils] Database connection check failed:', error);
         return false;
@@ -470,66 +470,39 @@ export const bulkUpdateRecords = async (
         throw new Error('Database is not accessible');
     }
 
-    let transactionStarted = false;
-
     try {
-        // Create a transaction
-        console.log('[DatabaseUtils] Executing BEGIN TRANSACTION');
-        await db.execAsync('BEGIN TRANSACTION');
-        transactionStarted = true;
-        console.log('[DatabaseUtils] BEGIN TRANSACTION successful');
+        // Use expo-sqlite's recommended transaction API
+        // This handles BEGIN/COMMIT/ROLLBACK automatically and safely
+        await db.withExclusiveTransactionAsync(async (txn) => {
+            console.log('[DatabaseUtils] Transaction started (withExclusiveTransactionAsync)');
 
-        // Loop through each record and update it
-        for (const record of records) {
-            console.log('[DatabaseUtils] Updating record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
-            await db.runAsync(
-                `UPDATE records SET
-                    server_session_id = ?,
-                    server_id = ?,
-                    owner = ?
-                WHERE id = ?`,
-                [
-                    serverSessionId,
-                    record.server_pk ?? 0,
-                    record.owner ?? 0,
-                    record.device_pk ?? 0,
-                ],
-            );
-            console.log('[DatabaseUtils] Record', record.device_pk, 'updated successfully');
-        }
-        // Commit the transaction
-        console.log('[DatabaseUtils] Executing COMMIT');
-        await db.execAsync('COMMIT');
-        transactionStarted = false;
+            // Loop through each record and update it using the transaction object
+            for (const record of records) {
+                console.log('[DatabaseUtils] Updating record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
+                await txn.runAsync(
+                    `UPDATE records SET
+                        server_session_id = ?,
+                        server_id = ?,
+                        owner = ?
+                    WHERE id = ?`,
+                    [
+                        serverSessionId,
+                        record.server_pk ?? 0,
+                        record.owner ?? 0,
+                        record.device_pk ?? 0,
+                    ],
+                );
+                console.log('[DatabaseUtils] Record', record.device_pk, 'updated successfully');
+            }
+
+            // Transaction will auto-commit on successful completion
+            console.log('[DatabaseUtils] All updates completed, transaction will auto-commit');
+        });
+
         console.log('[DatabaseUtils] Transaction committed successfully');
     } catch (error) {
-        console.error('[DatabaseUtils] Error in bulkUpdateRecords:', error);
-
-        // Only attempt rollback if transaction was started
-        if (transactionStarted) {
-            console.log('[DatabaseUtils] Attempting rollback...');
-            try {
-                // Check if DB is still accessible before rollback
-                const canRollback = await isDatabaseAccessible(db);
-                if (canRollback) {
-                    await db.execAsync('ROLLBACK');
-                    console.log('[DatabaseUtils] Transaction rolled back successfully');
-                } else {
-                    console.error('[DatabaseUtils] Database not accessible, cannot rollback. Transaction may be left open.');
-                    // Try to force a checkpoint to clear any locks
-                    try {
-                        await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
-                        console.log('[DatabaseUtils] WAL checkpoint executed to clear potential locks');
-                    } catch (checkpointError) {
-                        console.error('[DatabaseUtils] WAL checkpoint also failed:', checkpointError);
-                    }
-                }
-            } catch (rollbackError) {
-                console.error('[DatabaseUtils] Error during rollback:', rollbackError);
-                console.error('[DatabaseUtils] WARNING: Transaction may be left open, database may be in inconsistent state');
-            }
-        }
-
+        // Transaction automatically rolled back on error
+        console.error('[DatabaseUtils] Error in bulkUpdateRecords (transaction auto-rolled back):', error);
         // Re-throw the error so caller knows it failed
         throw error;
     }
@@ -556,66 +529,39 @@ export const bulkUpdateWeightRecords = async (
         throw new Error('Database is not accessible');
     }
 
-    let transactionStarted = false;
-
     try {
-        // Create a transaction
-        console.log('[DatabaseUtils] Executing BEGIN TRANSACTION for weight records');
-        await db.execAsync('BEGIN TRANSACTION');
-        transactionStarted = true;
-        console.log('[DatabaseUtils] BEGIN TRANSACTION successful for weight records');
+        // Use expo-sqlite's recommended transaction API
+        // This handles BEGIN/COMMIT/ROLLBACK automatically and safely
+        await db.withExclusiveTransactionAsync(async (txn) => {
+            console.log('[DatabaseUtils] Weight records transaction started (withExclusiveTransactionAsync)');
 
-        // Loop through each record and update it
-        for (const record of records) {
-            console.log('[DatabaseUtils] Updating weight record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
-            await db.runAsync(
-                `UPDATE weight_records SET
-                    server_session_id = ?,
-                    server_id = ?,
-                    owner = ?
-                WHERE id = ?`,
-                [
-                    serverSessionId,
-                    record.server_pk ?? 0,
-                    record.owner ?? 0,
-                    record.device_pk ?? 0,
-                ],
-            );
-            console.log('[DatabaseUtils] Weight record', record.device_pk, 'updated successfully');
-        }
-        // Commit the transaction
-        console.log('[DatabaseUtils] Executing COMMIT for weight records');
-        await db.execAsync('COMMIT');
-        transactionStarted = false;
+            // Loop through each record and update it using the transaction object
+            for (const record of records) {
+                console.log('[DatabaseUtils] Updating weight record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
+                await txn.runAsync(
+                    `UPDATE weight_records SET
+                        server_session_id = ?,
+                        server_id = ?,
+                        owner = ?
+                    WHERE id = ?`,
+                    [
+                        serverSessionId,
+                        record.server_pk ?? 0,
+                        record.owner ?? 0,
+                        record.device_pk ?? 0,
+                    ],
+                );
+                console.log('[DatabaseUtils] Weight record', record.device_pk, 'updated successfully');
+            }
+
+            // Transaction will auto-commit on successful completion
+            console.log('[DatabaseUtils] All weight record updates completed, transaction will auto-commit');
+        });
+
         console.log('[DatabaseUtils] Weight records transaction committed successfully');
     } catch (error) {
-        console.error('[DatabaseUtils] Error in bulkUpdateWeightRecords:', error);
-
-        // Only attempt rollback if transaction was started
-        if (transactionStarted) {
-            console.log('[DatabaseUtils] Attempting weight records rollback...');
-            try {
-                // Check if DB is still accessible before rollback
-                const canRollback = await isDatabaseAccessible(db);
-                if (canRollback) {
-                    await db.execAsync('ROLLBACK');
-                    console.log('[DatabaseUtils] Weight records transaction rolled back successfully');
-                } else {
-                    console.error('[DatabaseUtils] Database not accessible, cannot rollback weight records. Transaction may be left open.');
-                    // Try to force a checkpoint to clear any locks
-                    try {
-                        await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
-                        console.log('[DatabaseUtils] WAL checkpoint executed for weight records to clear potential locks');
-                    } catch (checkpointError) {
-                        console.error('[DatabaseUtils] WAL checkpoint for weight records also failed:', checkpointError);
-                    }
-                }
-            } catch (rollbackError) {
-                console.error('[DatabaseUtils] Error during weight records rollback:', rollbackError);
-                console.error('[DatabaseUtils] WARNING: Weight records transaction may be left open, database may be in inconsistent state');
-            }
-        }
-
+        // Transaction automatically rolled back on error
+        console.error('[DatabaseUtils] Error in bulkUpdateWeightRecords (transaction auto-rolled back):', error);
         // Re-throw the error so caller knows it failed
         throw error;
     }
