@@ -403,25 +403,49 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 // Request an email summary of the session (non-critical)
                 try {
-                    console.log('[RecordContext] Requesting email summary...');
+                    console.log('[RecordContext] ======================================');
+                    console.log('[RecordContext] ENTERING send_pdf_summary block');
+                    console.log('[RecordContext] Timestamp:', new Date().toISOString());
+                    console.log('[RecordContext] Session ID:', server_session_pk);
+                    console.log('[RecordContext] About to call api.post for send_pdf_summary...');
+
+                    const startTime = Date.now();
                     const summaryResponse = await api.post(
                         'exam_session/send_pdf_summary/',
                         { session_id: server_session_pk }
                     );
+                    const endTime = Date.now();
+
+                    console.log('[RecordContext] API call completed in', endTime - startTime, 'ms');
+                    console.log('[RecordContext] Full response object:', JSON.stringify(summaryResponse, null, 2));
+                    console.log('[RecordContext] Response.success:', summaryResponse.success);
+                    console.log('[RecordContext] Response.offline:', summaryResponse.offline);
+                    console.log('[RecordContext] Response.error:', summaryResponse.error);
+                    console.log('[RecordContext] Response.data:', summaryResponse.data);
 
                     if (!summaryResponse.success) {
+                        console.log('[RecordContext] Response was NOT successful');
                         if (summaryResponse.offline) {
+                            console.log('[RecordContext] Reason: Offline');
                             showToast('You are offline. Summary email will be sent when connectivity is restored.', 'warning');
                         } else if (summaryResponse.error) {
-                            console.error("[RecordContext] Failed to send PDF summary:", summaryResponse.error);
+                            console.error("[RecordContext] Reason: Error -", summaryResponse.error);
                             showToast('Error sending summary email.', 'error');
+                        } else {
+                            console.log('[RecordContext] Reason: Unknown (success=false, but no offline/error flag)');
                         }
                     } else {
-                        console.log('[RecordContext] Email summary requested successfully');
+                        console.log('[RecordContext] ✅ Email summary requested successfully');
                     }
+                    console.log('[RecordContext] EXITING send_pdf_summary block');
+                    console.log('[RecordContext] ======================================');
                 } catch (emailError) {
                     // Non-critical error - don't let it break the session finish
-                    console.error("[RecordContext] Non-critical error sending email summary:", emailError);
+                    console.error("[RecordContext] ❌ EXCEPTION CAUGHT in send_pdf_summary block");
+                    console.error("[RecordContext] Exception details:", emailError);
+                    console.error("[RecordContext] Exception type:", typeof emailError);
+                    console.error("[RecordContext] Exception stringified:", JSON.stringify(emailError, null, 2));
+                    console.error("[RecordContext] ======================================");
                 }
             } else if (response.offline) {
                 console.log('[RecordContext] Offline - session will sync later');
