@@ -35,8 +35,8 @@ export interface ApiOptions {
 
 // Default API options
 const DEFAULT_OPTIONS: ApiOptions = {
-    retries: 2,
-    retryDelay: 1000,
+    retries: 3, // Increased from 2 to 3 retries
+    retryDelay: 2000, // Increased from 1s to 2s to give network time to stabilize
     timeout: 10000,
 };
 
@@ -79,6 +79,11 @@ export async function withErrorHandling<T>(
             // Decrement retry counter
             retries--;
 
+            // Check if this is a network connectivity error
+            const isNetworkError = error.message?.includes('Network request failed') ||
+                                   error.message?.includes('Failed to fetch') ||
+                                   error.message?.includes('network');
+
             // Format error consistently
             const apiError: ApiError = {
                 status: error.status || 500,
@@ -89,14 +94,18 @@ export async function withErrorHandling<T>(
 
             // If we have retries left, wait and then loop again
             if (retries >= 0) {
+                console.log(`[ApiService] ${isNetworkError ? 'Network error' : 'Error'}, retrying in ${options.retryDelay || DEFAULT_OPTIONS.retryDelay}ms... (${retries} retries left)`);
                 await new Promise((resolve) =>
                     setTimeout(resolve, options.retryDelay || DEFAULT_OPTIONS.retryDelay)
                 );
                 continue;
             }
 
-            // No retries left, return error
-            console.error("API Error:", apiError);
+            // No retries left, return error with better message for network errors
+            if (isNetworkError) {
+                apiError.message = "Network not ready. Please wait a moment and try again.";
+            }
+            console.error("API Error (no retries left):", apiError);
             return { error: apiError, loading: false, success: false };
         }
     }

@@ -23,6 +23,10 @@ const RecordSyncService = {
         weightRecords: WeightRecordType[],
         showToast: (message: string, type: 'success' | 'error' | 'warning') => void
     ) {
+        console.log('[RecordSyncService] trySync started with', records.length, 'preg records and', weightRecords.length, 'weight records');
+        let pregSessionsSynced = 0;
+        let weightSessionsSynced = 0;
+
         // Handle pregnancy scan records
         if (records.length > 0) {
 
@@ -45,10 +49,13 @@ const RecordSyncService = {
                     device_session_pk: sessionId,
                 }
 
+                console.log('[RecordSyncService] Syncing pregnancy session', sessionId, 'with', unpostedRecords.length, 'records');
+
                 const response = await api.post(
                     'exam_session/create_session/',
                     postData
                 );
+
                 if (response.success && response.data) {
                     type ServerResponse = {
                         session: {
@@ -59,7 +66,7 @@ const RecordSyncService = {
                     }
                     const data = response.data as ServerResponse;
                     const server_session_pk = data.session.id;
-                    console.log("Response data: ", data);
+                    console.log("[RecordSyncService] Pregnancy session synced successfully, server ID:", server_session_pk);
 
                     // Update the records with their server ids
                     unpostedRecords.forEach((record) => {
@@ -75,22 +82,32 @@ const RecordSyncService = {
                         unpostedRecords,
                         server_session_pk
                     );
-                    console.log("Records updated successfully with server session pk.");
+                    console.log("[RecordSyncService] Local database updated for pregnancy session");
+                    pregSessionsSynced++;
 
-                    // Request an email summary of the session
-                    const summaryResponse = await api.post(
-                        'exam_session/send_pdf_summary/',
-                        { session_id: server_session_pk }
-                    );
+                    // Request an email summary of the session (non-critical)
+                    try {
+                        const summaryResponse = await api.post(
+                            'exam_session/send_pdf_summary/',
+                            { session_id: server_session_pk }
+                        );
 
-                    if (!summaryResponse.success) {
-                        if (summaryResponse.offline) {
-                            showToast('You are offline. Summary email will be sent when connectivity is restored.', 'warning');
-                        } else if (summaryResponse.error) {
-                            console.error("Failed to send PDF summary:", summaryResponse.error);
-                            showToast('Error sending summary email.', 'error');
+                        if (!summaryResponse.success) {
+                            if (summaryResponse.offline) {
+                                console.log('[RecordSyncService] Offline for email summary');
+                            } else if (summaryResponse.error) {
+                                console.error("[RecordSyncService] Failed to send PDF summary:", summaryResponse.error);
+                            }
                         }
+                    } catch (emailError) {
+                        console.error("[RecordSyncService] Non-critical error sending email:", emailError);
                     }
+                } else if (response.offline) {
+                    console.error('[RecordSyncService] Offline - cannot sync pregnancy session', sessionId);
+                    throw new Error('You are offline. Please check your internet connection.');
+                } else if (response.error) {
+                    console.error('[RecordSyncService] Error syncing pregnancy session', sessionId, ':', response.error);
+                    throw new Error(`Failed to sync pregnancy records: ${response.error}`);
                 }
             }
         }
@@ -117,6 +134,8 @@ const RecordSyncService = {
                     device_session_pk: sessionId,
                 }
 
+                console.log('[RecordSyncService] Syncing weight session', sessionId, 'with', unpostedWeightRecords.length, 'records');
+
                 const response = await api.post(
                     'exam_session/create_weight_session/',
                     postData
@@ -132,7 +151,7 @@ const RecordSyncService = {
                     }
                     const data = response.data as ServerResponse;
                     const server_session_pk = data.session.id;
-                    console.log("Response data: ", data);
+                    console.log("[RecordSyncService] Weight session synced successfully, server ID:", server_session_pk);
 
                     // Update the records with their server ids
                     unpostedWeightRecords.forEach((record) => {
@@ -148,28 +167,42 @@ const RecordSyncService = {
                         unpostedWeightRecords,
                         server_session_pk
                     );
-                    console.log("Weight records updated successfully with server session pk.");
+                    console.log("[RecordSyncService] Local database updated for weight session");
+                    weightSessionsSynced++;
 
-                    // Request an email summary of the session
-                    const summaryResponse = await api.post(
-                        'exam_session/send_weight_summary_email/',
-                        { session_id: server_session_pk }
-                    );
+                    // Request an email summary of the session (non-critical)
+                    try {
+                        const summaryResponse = await api.post(
+                            'exam_session/send_weight_summary_email/',
+                            { session_id: server_session_pk }
+                        );
 
-                    if (!summaryResponse.success) {
-                        if (summaryResponse.offline) {
-                            showToast('You are offline. Summary email will be sent when connectivity is restored.', 'warning');
-                        } else if (summaryResponse.error) {
-                            console.error("Failed to send PDF summary:", summaryResponse.error);
-                            showToast('Error sending summary email.', 'error');
+                        if (!summaryResponse.success) {
+                            if (summaryResponse.offline) {
+                                console.log('[RecordSyncService] Offline for email summary');
+                            } else if (summaryResponse.error) {
+                                console.error("[RecordSyncService] Failed to send weight summary email:", summaryResponse.error);
+                            }
                         }
+                    } catch (emailError) {
+                        console.error("[RecordSyncService] Non-critical error sending email:", emailError);
                     }
+                } else if (response.offline) {
+                    console.error('[RecordSyncService] Offline - cannot sync weight session', sessionId);
+                    throw new Error('You are offline. Please check your internet connection.');
+                } else if (response.error) {
+                    console.error('[RecordSyncService] Error syncing weight session', sessionId, ':', response.error);
+                    throw new Error(`Failed to sync weight records: ${response.error}`);
                 }
             }
         }
 
-        
-
+        // Show success message if any sessions were synced
+        const totalSynced = pregSessionsSynced + weightSessionsSynced;
+        if (totalSynced > 0) {
+            console.log('[RecordSyncService] Sync complete:', pregSessionsSynced, 'pregnancy sessions,', weightSessionsSynced, 'weight sessions');
+            showToast(`Successfully synced ${totalSynced} session${totalSynced > 1 ? 's' : ''}!`, 'success');
+        }
     }
 
 };

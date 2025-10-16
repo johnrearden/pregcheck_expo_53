@@ -439,11 +439,23 @@ export const bulkUpdateRecords = async (
     records: RecordType[],
     serverSessionId: number,
 ) => {
-    // Create a transaction
-    await db.execAsync('BEGIN TRANSACTION');
+    console.log('[DatabaseUtils] bulkUpdateRecords starting transaction for', records.length, 'records');
+
+    // Validate database connection
+    if (!db) {
+        console.error('[DatabaseUtils] Database connection is null or undefined!');
+        throw new Error('Database connection is not available');
+    }
+
     try {
+        // Create a transaction
+        console.log('[DatabaseUtils] Executing BEGIN TRANSACTION');
+        await db.execAsync('BEGIN TRANSACTION');
+        console.log('[DatabaseUtils] BEGIN TRANSACTION successful');
+
         // Loop through each record and update it
         for (const record of records) {
+            console.log('[DatabaseUtils] Updating record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
             await db.runAsync(
                 `UPDATE records SET
                     server_session_id = ?,
@@ -457,13 +469,23 @@ export const bulkUpdateRecords = async (
                     record.device_pk ?? 0,
                 ],
             );
+            console.log('[DatabaseUtils] Record', record.device_pk, 'updated successfully');
         }
         // Commit the transaction
+        console.log('[DatabaseUtils] Executing COMMIT');
         await db.execAsync('COMMIT');
+        console.log('[DatabaseUtils] Transaction committed successfully');
     } catch (error) {
         // Rollback the transaction in case of an error
-        await db.execAsync('ROLLBACK');
-        console.error('Error updating records:', error);
+        console.error('[DatabaseUtils] Error in bulkUpdateRecords, rolling back:', error);
+        try {
+            await db.execAsync('ROLLBACK');
+            console.log('[DatabaseUtils] Transaction rolled back');
+        } catch (rollbackError) {
+            console.error('[DatabaseUtils] Error during rollback:', rollbackError);
+        }
+        // Re-throw the error so caller knows it failed
+        throw error;
     }
 }
 
@@ -473,11 +495,23 @@ export const bulkUpdateWeightRecords = async (
     records: WeightRecordType[],
     serverSessionId: number,
 ) => {
-    // Create a transaction
-    await db.execAsync('BEGIN TRANSACTION');
+    console.log('[DatabaseUtils] bulkUpdateWeightRecords starting transaction for', records.length, 'records');
+
+    // Validate database connection
+    if (!db) {
+        console.error('[DatabaseUtils] Database connection is null or undefined!');
+        throw new Error('Database connection is not available');
+    }
+
     try {
+        // Create a transaction
+        console.log('[DatabaseUtils] Executing BEGIN TRANSACTION for weight records');
+        await db.execAsync('BEGIN TRANSACTION');
+        console.log('[DatabaseUtils] BEGIN TRANSACTION successful for weight records');
+
         // Loop through each record and update it
         for (const record of records) {
+            console.log('[DatabaseUtils] Updating weight record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
             await db.runAsync(
                 `UPDATE weight_records SET
                     server_session_id = ?,
@@ -491,13 +525,23 @@ export const bulkUpdateWeightRecords = async (
                     record.device_pk ?? 0,
                 ],
             );
+            console.log('[DatabaseUtils] Weight record', record.device_pk, 'updated successfully');
         }
         // Commit the transaction
+        console.log('[DatabaseUtils] Executing COMMIT for weight records');
         await db.execAsync('COMMIT');
+        console.log('[DatabaseUtils] Weight records transaction committed successfully');
     } catch (error) {
         // Rollback the transaction in case of an error
-        await db.execAsync('ROLLBACK');
-        console.error('Error updating weight records:', error);
+        console.error('[DatabaseUtils] Error in bulkUpdateWeightRecords, rolling back:', error);
+        try {
+            await db.execAsync('ROLLBACK');
+            console.log('[DatabaseUtils] Weight records transaction rolled back');
+        } catch (rollbackError) {
+            console.error('[DatabaseUtils] Error during weight records rollback:', rollbackError);
+        }
+        // Re-throw the error so caller knows it failed
+        throw error;
     }
 }
 

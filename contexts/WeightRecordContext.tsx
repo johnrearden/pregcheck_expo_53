@@ -73,6 +73,7 @@ export interface WeightRecordMethodContextType {
     getTagList: () => string[];
     recallRecord: (tag: string) => WeightRecordType;
     isWeightSessionRunning?: boolean;
+    isWeightFinishing?: boolean;
     recordCount: number;
 }
 
@@ -112,6 +113,7 @@ export const WeightRecordMethodContext = createContext<WeightRecordMethodContext
     getTagList: () => [],
     recallRecord: (tag: string) => initialRecord as WeightRecordType,
     isWeightSessionRunning: false,
+    isWeightFinishing: false,
     recordCount: 0,
 });
 
@@ -129,6 +131,9 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Set the initial state of the sessionRunning flag, used throughout
     // the app to determine if a session is running
     const [sessionRunning, setSessionRunning] = useState<boolean>(false);
+
+    // Set the finishing flag to prevent database access during cleanup
+    const [isFinishing, setIsFinishing] = useState<boolean>(false);
 
     // Get a reference to the SQLite database
     const db = useSQLiteContext();
@@ -289,108 +294,136 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     const handleFinished = async () => {
+        console.log('[WeightRecordContext] handleFinished started, sessionID:', sessionID, 'recordCount:', weightRecordList.length);
 
-        // Remove the session from AsyncStorage
+        // Set finishing flag to prevent concurrent database access
+        setIsFinishing(true);
+
         try {
-            await AsyncStorage.removeItem(WEIGHT_SESSION_KEY);
-        } catch (error) {
-            console.error("Error removing session from AsyncStorage:", error);
-        }
-
-        // Check if this session contains any records
-        if (weightRecordList.length === 0) {
-            try {
+            // Check if this session contains any records
+            if (weightRecordList.length === 0) {
+                console.log('[WeightRecordContext] Empty session, removing from database');
                 await removeEmptyWeightSession(db, sessionID);
-
-            } catch (error) {
-                console.error("Error removing empty session from database:", error);
-            }
-            console.log('Session is empty. No data to send.', 'info');
-            setSessionRunning(false);
-            return;
-        }
-
-        // Create a list of unposted records and a list of posted record ids
-        let unpostedRecords = weightRecordList.filter((record) => record.server_pk === 0);
-        let postedRecords = weightRecordList.filter((record) => record.server_pk !== 0);
-        let postedRecordIds = postedRecords.map((record) => record.server_pk);
-
-        let postData = {
-            unposted_records: unpostedRecords,
-            posted_record_ids: postedRecordIds,
-            device_session_pk: sessionID,
-        };
-
-        const response = await api.post(
-            'exam_session/create_weight_session/',
-            postData
-        );
-        if (response.success && response.data) {
-            type ServerResponse = {
-                session: {
-                    id: number;
-                },
-                unposted_record_ids: Record<string, number>,
-                owner: number;
-            }
-            const data = response.data as ServerResponse;
-            const server_session_pk = data.session.id;
-            const unpostedRecordIds = data.unposted_record_ids;
-            const owner = data.owner;
-
-            // Loop through the unposted records and update their server pk
-            const newList = [];
-            for (const record of weightRecordList) {
-                // Check if the record is unposted
-                const key = `${record.device_pk}`;
-                const server_pk = unpostedRecordIds[key];
-                if (server_pk) {
-                    record.server_pk = server_pk;
-                    record.owner = owner;
-                }
-                record.device_session_pk = server_session_pk;
-                newList.push(record);
+                return;
             }
 
-            // Update the local records with the server session pk
-            await bulkUpdateWeightRecords(db, newList, server_session_pk);
+            console.log('[WeightRecordContext] Preparing to sync session with', weightRecordList.length, 'records');
 
-            // Persist the new server session id to the sqlite database
-            await updateLocalWeightSession(
-                db,
-                server_session_pk,
-                sessionID,
-                weightRecordList.length);
+            // Create a list of unposted records and a list of posted record ids
+            let unpostedRecords = weightRecordList.filter((record) => record.server_pk === 0);
+            let postedRecords = weightRecordList.filter((record) => record.server_pk !== 0);
+            let postedRecordIds = postedRecords.map((record) => record.server_pk);
 
-            // Reset the weight record list
-            setWeightRecordList([]);
+            console.log('[WeightRecordContext] Unposted:', unpostedRecords.length, 'Posted:', postedRecords.length);
 
-            // Request an email summary of the session
-            const emailResponse = await api.post(
-                'exam_session/send_weight_summary_email/',
-                { session_id: server_session_pk }
+            let postData = {
+                unposted_records: unpostedRecords,
+                posted_record_ids: postedRecordIds,
+                device_session_pk: sessionID,
+            };
+
+            console.log('[WeightRecordContext] Sending session to server...');
+            const response = await api.post(
+                'exam_session/create_weight_session/',
+                postData
             );
-            if (emailResponse.success) {
-                showToast('Email summary sent successfully.', 'success');
-            }
-            else if (emailResponse.error) {
-                console.error("Failed to send email summary:", emailResponse.error);
-                showToast('Error sending email summary.', 'error');
-            }
-        } else if (response.error) {
-            // Handle offline mode or other errors
-            if (response.offline) {
-                showToast('You are offline. Session saved locally.', 'warning');
-            } else {
-                console.error("Failed to create session on server:", response.error);
-                showToast('Error creating session on server. Session saved locally.', 'error');
-            }
-        }
+            console.log('[WeightRecordContext] Server response received, success:', response.success);
 
-        // Finally, set sessionRunning to false. This is last to run to ensure
-        // that the session records have been assigned their server pk and so 
-        // do not register as unposted
-        setSessionRunning(false);
+            if (response.success && response.data) {
+                type ServerResponse = {
+                    session: {
+                        id: number;
+                    },
+                    unposted_record_ids: Record<string, number>,
+                    owner: number;
+                }
+                const data = response.data as ServerResponse;
+                const server_session_pk = data.session.id;
+                const unposted_record_ids = data.unposted_record_ids;
+                const owner = data.owner;
+
+                console.log('[WeightRecordContext] Server session created, ID:', server_session_pk);
+
+                // Loop through the unposted records and update their server pk
+                const newList = [];
+                for (const record of weightRecordList) {
+                    const key = `${record.device_pk}`;
+                    const server_pk = unposted_record_ids[key];
+                    if (server_pk) {
+                        record.server_pk = server_pk;
+                        record.owner = owner;
+                    }
+                    record.device_session_pk = server_session_pk;
+                    newList.push(record);
+                }
+
+                console.log('[WeightRecordContext] Updating local database with server IDs...');
+                await bulkUpdateWeightRecords(db, newList, server_session_pk);
+                await updateLocalWeightSession(db, server_session_pk, sessionID, weightRecordList.length);
+                console.log('[WeightRecordContext] Local database updated successfully');
+
+                // Request an email summary of the session (non-critical)
+                try {
+                    console.log('[WeightRecordContext] Requesting email summary...');
+                    const emailResponse = await api.post(
+                        'exam_session/send_weight_summary_email/',
+                        { session_id: server_session_pk }
+                    );
+                    if (emailResponse.success) {
+                        console.log('[WeightRecordContext] Email summary sent successfully');
+                        showToast('Email summary sent successfully.', 'success');
+                    }
+                    else if (emailResponse.error) {
+                        console.error("[WeightRecordContext] Failed to send email summary:", emailResponse.error);
+                        showToast('Error sending email summary.', 'error');
+                    }
+                } catch (emailError) {
+                    // Non-critical error - don't let it break the session finish
+                    console.error("[WeightRecordContext] Non-critical error sending email summary:", emailError);
+                }
+            } else if (response.error) {
+                // Handle offline mode or other errors
+                if (response.offline) {
+                    console.log('[WeightRecordContext] Offline - session will sync later');
+                    showToast('You are offline. Session saved locally.', 'warning');
+                } else {
+                    console.error("[WeightRecordContext] Failed to create session on server:", response.error);
+                    showToast('Error creating session on server. Session saved locally.', 'error');
+                }
+            }
+
+            console.log('[WeightRecordContext] handleFinished completed successfully');
+            return true;
+
+        } catch (error) {
+            console.error("[WeightRecordContext] CRITICAL ERROR in handleFinished:", error);
+            showToast('Error completing session. Data saved locally.', 'error');
+            return false;
+        } finally {
+            // ✅ CRITICAL: Always execute cleanup, even if errors occur above
+            console.log('[WeightRecordContext] Cleaning up session state (finally block)');
+
+            // Clear AsyncStorage
+            try {
+                await AsyncStorage.removeItem(WEIGHT_SESSION_KEY);
+                console.log('[WeightRecordContext] AsyncStorage cleared');
+            } catch (error) {
+                console.error("[WeightRecordContext] Error removing session from AsyncStorage:", error);
+            }
+
+            // CRITICAL: Always set session to not running
+            setSessionRunning(false);
+            console.log('[WeightRecordContext] Session marked as not running');
+
+            // NOTE: Do NOT reset stats and weightRecordList here!
+            // The summary screen needs these stats to display the pie chart.
+            // They will be reset when a new session starts (in createWeightSession)
+            console.log('[WeightRecordContext] Keeping stats and weightRecordList for summary screen display');
+
+            // Clear finishing flag
+            setIsFinishing(false);
+            console.log('[WeightRecordContext] Finishing flag cleared');
+        }
     }
 
     const resetWeightState = () => {
@@ -426,6 +459,19 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     const createWeightSession = async () => {
+        // Reset stats and weightRecordList from previous session before creating new one
+        console.log('[WeightRecordContext] Creating new session, resetting previous session data');
+        setWeightRecordList([]);
+        setStats({
+            total: 0,
+            total_female: 0,
+            total_male: 0,
+            total_weight: 0,
+            weight_unit: '',
+            ageWeights: [],
+            kilo_unit_count: 0,
+        });
+
         const newSessionID = await createLocalWeightSession(db);
 
         if (newSessionID !== undefined) {
@@ -463,6 +509,7 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 getTagList: getTagList,
                 recallRecord: recallRecord,
                 isWeightSessionRunning: sessionRunning,
+                isWeightFinishing: isFinishing,
                 recordCount: weightRecordList.length,
             }}>
                 {children}

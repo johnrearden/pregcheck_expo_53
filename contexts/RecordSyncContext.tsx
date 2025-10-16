@@ -34,18 +34,28 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [isOnline, setIsOnline] = useState(false);
     const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
     const showToast = useToast();
-    const { isSessionRunning } = usePersistRecord();
+    const { isSessionRunning, isFinishing } = usePersistRecord();
     const sessionRunningRef = useRef(isSessionRunning);
-    const { isWeightSessionRunning } = useWeightRecordMethod();
+    const finishingRef = useRef(isFinishing);
+    const { isWeightSessionRunning, isWeightFinishing } = useWeightRecordMethod();
     const weightSessionRunningRef = useRef(isWeightSessionRunning);
+    const weightFinishingRef = useRef(isWeightFinishing);
 
     useEffect(() => {
         sessionRunningRef.current = isSessionRunning;
     }, [isSessionRunning]);
 
     useEffect(() => {
+        finishingRef.current = isFinishing;
+    }, [isFinishing]);
+
+    useEffect(() => {
         weightSessionRunningRef.current = isWeightSessionRunning;
     }, [isWeightSessionRunning]);
+
+    useEffect(() => {
+        weightFinishingRef.current = isWeightFinishing;
+    }, [isWeightFinishing]);
 
     // Add AppState listener to track when app is active/background
     useEffect(() => {
@@ -173,8 +183,8 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 return;
             }
 
-            if (sessionRunningRef.current || weightSessionRunningRef.current) {
-                console.log('[RecordSyncContext] Session is running, skipping sync check');
+            if (sessionRunningRef.current || weightSessionRunningRef.current || finishingRef.current || weightFinishingRef.current) {
+                console.log('[RecordSyncContext] Session is running or finishing, skipping sync check');
                 return;
             }
 

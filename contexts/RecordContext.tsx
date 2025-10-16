@@ -60,6 +60,7 @@ export interface PersistRecordContextType {
     resetState: () => void;
     getTagList: () => string[];
     isSessionRunning?: boolean;
+    isFinishing?: boolean;
     recordCount: number;
 }
 
@@ -99,6 +100,7 @@ export const PersistRecordContext = createContext<PersistRecordContextType>({
     resetState: () => { },
     getTagList: () => [],
     isSessionRunning: false,
+    isFinishing: false,
     recordCount: 0,
 });
 
@@ -121,6 +123,9 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Set the initial state of the sessionRunning flag, used throughout
     // the app to determine if a session is running
     const [sessionRunning, setSessionRunning] = useState<boolean>(false);
+
+    // Set the finishing flag to prevent database access during cleanup
+    const [isFinishing, setIsFinishing] = useState<boolean>(false);
 
     // Set the initial default state of the recordList
     const [recordList, setRecordList] = useState<RecordType[]>([]);
@@ -300,6 +305,11 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // param must be passed, as the state of the record is set until the next
     // rerender. Thanks React!
     const createSession = async (gestation_days: number) => {
+        // Reset stats and recordList from previous session before creating new one
+        console.log('[RecordContext] Creating new session, resetting previous session data');
+        setRecordList([]);
+        resetStats();
+
         const newSessionID = await createLocalSession(db);
 
         if (newSessionID) {
@@ -323,108 +333,136 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Handle finishing a session, sending data to the server
     const handleFinished = async () => {
+        console.log('[RecordContext] handleFinished started, sessionID:', sessionID, 'recordCount:', recordList.length);
 
-        // Remove the session from AsyncStorage
+        // Set finishing flag to prevent concurrent database access
+        setIsFinishing(true);
+
         try {
-            await AsyncStorage.removeItem(PREG_SESSION_KEY);
-        } catch (error: any) {
-            console.error("Error removing session from AsyncStorage:", error);
-        }
-
-        // Check if this session contains any records
-        if (recordList.length === 0) {
-            try {
+            // Check if this session contains any records
+            if (recordList.length === 0) {
+                console.log('[RecordContext] Empty session, removing from database');
                 await removeEmptySession(db, sessionID);
-                setSessionRunning(false);
-            } catch (error) {
-                console.error("Error removing empty session from database:", error);
-            }
-            return;
-        }
-
-        let unpostedRecords = recordList.filter((record) => record.server_pk === 0);
-        let postedRecords = recordList.filter((record) => record.server_pk !== 0);
-        let postedRecordIds = postedRecords.map((record) => record.server_pk);
-
-        let postData = {
-            unposted_records: unpostedRecords,
-            posted_record_ids: postedRecordIds,
-            device_session_pk: sessionID,
-        };
-
-        // Send the unposted records to the database and request an email summary
-        const response = await api.post(
-            'exam_session/create_session/',
-            postData
-        );
-
-        if (response.success && response.data) {
-            type ServerResponse = {
-                session: {
-                    id: number;
-                },
-                unposted_record_ids: Record<string, number>,
-                owner: number,
-            }
-            const data = response.data as ServerResponse;
-            const server_session_pk = data.session.id;
-            const unpostedRecordIds = data.unposted_record_ids;
-            const owner = data.owner;
-
-            // Loop through the unposted records and update their server pk, adding
-            // them to a new list
-            const newList = [];
-            for (const record of recordList) {
-                // Check if the record is unposted
-                const key = `${record.device_pk}`;
-                const server_pk = unpostedRecordIds[key];
-                if (server_pk) {
-                    record.server_pk = server_pk;
-                    record.owner = owner;
-                }
-                record.device_session_pk = server_session_pk;
-                newList.push(record);
+                return;
             }
 
-            // Update the local records with the server session pk
-            await bulkUpdateRecords(db, newList, server_session_pk);
+            console.log('[RecordContext] Preparing to sync session with', recordList.length, 'records');
 
-            // Update the local session record with the server session pk
-            await updateLocalSession(
-                db,
-                server_session_pk,
-                sessionID,
-                recordList.length);
+            let unpostedRecords = recordList.filter((record) => record.server_pk === 0);
+            let postedRecords = recordList.filter((record) => record.server_pk !== 0);
+            let postedRecordIds = postedRecords.map((record) => record.server_pk);
 
+            console.log('[RecordContext] Unposted:', unpostedRecords.length, 'Posted:', postedRecords.length);
 
-            // Request an email summary of the session
-            const summaryResponse = await api.post(
-                'exam_session/send_pdf_summary/',
-                { session_id: server_session_pk }
+            let postData = {
+                unposted_records: unpostedRecords,
+                posted_record_ids: postedRecordIds,
+                device_session_pk: sessionID,
+            };
+
+            // Send the unposted records to the database and request an email summary
+            console.log('[RecordContext] Sending session to server...');
+            const response = await api.post(
+                'exam_session/create_session/',
+                postData
             );
+            console.log('[RecordContext] Server response received, success:', response.success);
 
-            if (!summaryResponse.success) {
-                if (summaryResponse.offline) {
-                    showToast('You are offline. Summary email will be sent when connectivity is restored.', 'warning');
-                } else if (summaryResponse.error) {
-                    console.error("Failed to send PDF summary:", summaryResponse.error);
-                    showToast('Error sending summary email.', 'error');
+            if (response.success && response.data) {
+                type ServerResponse = {
+                    session: {
+                        id: number;
+                    },
+                    unposted_record_ids: Record<string, number>,
+                    owner: number,
                 }
+                const data = response.data as ServerResponse;
+                const server_session_pk = data.session.id;
+                const unpostedRecordIds = data.unposted_record_ids;
+                const owner = data.owner;
+
+                console.log('[RecordContext] Server session created, ID:', server_session_pk);
+
+                // Loop through the unposted records and update their server pk
+                const newList = [];
+                for (const record of recordList) {
+                    const key = `${record.device_pk}`;
+                    const server_pk = unpostedRecordIds[key];
+                    if (server_pk) {
+                        record.server_pk = server_pk;
+                        record.owner = owner;
+                    }
+                    record.device_session_pk = server_session_pk;
+                    newList.push(record);
+                }
+
+                console.log('[RecordContext] Updating local database with server IDs...');
+                await bulkUpdateRecords(db, newList, server_session_pk);
+                await updateLocalSession(db, server_session_pk, sessionID, recordList.length);
+                console.log('[RecordContext] Local database updated successfully');
+
+                // Request an email summary of the session (non-critical)
+                try {
+                    console.log('[RecordContext] Requesting email summary...');
+                    const summaryResponse = await api.post(
+                        'exam_session/send_pdf_summary/',
+                        { session_id: server_session_pk }
+                    );
+
+                    if (!summaryResponse.success) {
+                        if (summaryResponse.offline) {
+                            showToast('You are offline. Summary email will be sent when connectivity is restored.', 'warning');
+                        } else if (summaryResponse.error) {
+                            console.error("[RecordContext] Failed to send PDF summary:", summaryResponse.error);
+                            showToast('Error sending summary email.', 'error');
+                        }
+                    } else {
+                        console.log('[RecordContext] Email summary requested successfully');
+                    }
+                } catch (emailError) {
+                    // Non-critical error - don't let it break the session finish
+                    console.error("[RecordContext] Non-critical error sending email summary:", emailError);
+                }
+            } else if (response.offline) {
+                console.log('[RecordContext] Offline - session will sync later');
+                showToast('You are offline. Session will be synchronized when connectivity is restored.', 'warning');
+            } else if (response.error) {
+                console.error("[RecordContext] Failed to create session:", response.error);
+                showToast('Error creating session. Data saved locally.', 'error');
             }
-        } else if (response.offline) {
-            showToast('You are offline. Session will be synchronized when connectivity is restored.', 'warning');
-        } else if (response.error) {
-            console.error("Failed to create session:", response.error);
-            showToast('Error creating session. Data saved locally.', 'error');
+
+            console.log('[RecordContext] handleFinished completed successfully');
+            return true;
+
+        } catch (error) {
+            console.error("[RecordContext] CRITICAL ERROR in handleFinished:", error);
+            showToast('Error completing session. Data saved locally.', 'error');
+            return false;
+        } finally {
+            // ✅ CRITICAL: Always execute cleanup, even if errors occur above
+            console.log('[RecordContext] Cleaning up session state (finally block)');
+
+            // Clear AsyncStorage
+            try {
+                await AsyncStorage.removeItem(PREG_SESSION_KEY);
+                console.log('[RecordContext] AsyncStorage cleared');
+            } catch (error) {
+                console.error("[RecordContext] Error removing session from AsyncStorage:", error);
+            }
+
+            // CRITICAL: Always set session to not running
+            setSessionRunning(false);
+            console.log('[RecordContext] Session marked as not running');
+
+            // NOTE: Do NOT reset stats and recordList here!
+            // The summary screen needs these stats to display the pie chart.
+            // They will be reset when a new session starts (in createSession)
+            console.log('[RecordContext] Keeping stats and recordList for summary screen display');
+
+            // Clear finishing flag
+            setIsFinishing(false);
+            console.log('[RecordContext] Finishing flag cleared');
         }
-
-        // Finally, set sessionRunning to false. This is last to run to ensure
-        // that the session records have been assigned their server pk and so 
-        // do not register as unposted
-        setSessionRunning(false);
-
-        return true;
-
     }
 
     // Check if a tag already exists in the record list
@@ -471,6 +509,7 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     resetState,
                     getTagList,
                     isSessionRunning: sessionRunning,
+                    isFinishing: isFinishing,
                     recordCount: recordList.length,
                 }}>
                 {children}

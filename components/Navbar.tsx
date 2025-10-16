@@ -35,19 +35,26 @@ const Navbar = (props: NavbarProps) => {
 
 
     const handleSyncPress = async () => {
-        if (hasPendingSync && isOnline) {
-            try {
-                setSyncing(true);
-                await syncRecords();
-                setSyncing(false);
-                Alert.alert("Sync Complete", "Records synchronized successfully.");
-            } catch (error) {
-                Alert.alert("Sync Failed", "Failed to synchronize records. Please try again later.");
-            }
-        } else if (hasPendingSync) {
+        if (!hasPendingSync) {
+            return; // Nothing to sync
+        }
+
+        if (!isOnline) {
             Alert.alert("Offline", "Cannot sync while offline. Connect to the internet and try again.");
-        } else {
-            Alert.alert("No Sync Needed", "All records are already synchronized.");
+            return;
+        }
+
+        try {
+            console.log('[Navbar] Starting manual sync...');
+            setSyncing(true);
+            await syncRecords();
+            console.log('[Navbar] Manual sync completed successfully');
+        } catch (error: any) {
+            console.error('[Navbar] Manual sync failed:', error);
+            const errorMessage = error?.message || 'Failed to synchronize records. Please try again later.';
+            Alert.alert("Sync Failed", errorMessage);
+        } finally {
+            setSyncing(false);
         }
     };
 
