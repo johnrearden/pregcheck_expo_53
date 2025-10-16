@@ -1,7 +1,8 @@
 import { RecordType } from "@/contexts/RecordContext";
 import { WeightRecordType } from "@/contexts/WeightRecordContext";
-import { bulkUpdateRecords, getUnpostedRecords, 
-    getUnpostedWeightRecords, bulkUpdateWeightRecords } from "@/utilities/DatabaseUtils"
+import { bulkUpdateRecords, getUnpostedRecords,
+    getUnpostedWeightRecords, bulkUpdateWeightRecords,
+    updateLocalSession, updateLocalWeightSession } from "@/utilities/DatabaseUtils"
 import { SQLiteDatabase } from "expo-sqlite";
 import { api } from "./ApiService";
 
@@ -83,6 +84,11 @@ const RecordSyncService = {
                         server_session_pk
                     );
                     console.log("[RecordSyncService] Local database updated for pregnancy session");
+
+                    // Update the local session with server ID and record count
+                    await updateLocalSession(db, server_session_pk, parseInt(sessionId), unpostedRecords.length);
+                    console.log("[RecordSyncService] Local session updated with server ID and record count");
+
                     pregSessionsSynced++;
 
                     // Request an email summary of the session (non-critical)
@@ -168,6 +174,11 @@ const RecordSyncService = {
                         server_session_pk
                     );
                     console.log("[RecordSyncService] Local database updated for weight session");
+
+                    // Update the local weight session with server ID and record count
+                    await updateLocalWeightSession(db, server_session_pk, parseInt(sessionId), unpostedWeightRecords.length);
+                    console.log("[RecordSyncService] Local weight session updated with server ID and record count");
+
                     weightSessionsSynced++;
 
                     // Request an email summary of the session (non-critical)
