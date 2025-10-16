@@ -444,10 +444,19 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     newList.push(record);
                 }
 
-                console.log('[RecordContext] Updating local database with server IDs...');
-                await bulkUpdateRecords(db, newList, server_session_pk);
-                await updateLocalSession(db, server_session_pk, sessionID, recordList.length);
-                console.log('[RecordContext] Local database updated successfully');
+                // Wrap database operations in try-catch to prevent DB errors from breaking the app
+                // Email has already been sent at this point, so DB failure is non-critical
+                try {
+                    console.log('[RecordContext] Updating local database with server IDs...');
+                    await bulkUpdateRecords(db, newList, server_session_pk);
+                    await updateLocalSession(db, server_session_pk, sessionID, recordList.length);
+                    console.log('[RecordContext] Local database updated successfully');
+                } catch (dbError) {
+                    // Database update failed, but session was saved on server and email was sent
+                    console.error('[RecordContext] Database update failed (non-critical):', dbError);
+                    showToast('Session saved on server. Local sync will occur later.', 'warning');
+                    // Don't throw - allow app to continue functioning
+                }
             } else if (response.offline) {
                 console.log('[RecordContext] Offline - session will sync later');
                 showToast('You are offline. Session will be synchronized when connectivity is restored.', 'warning');

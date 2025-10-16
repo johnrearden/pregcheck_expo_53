@@ -161,6 +161,22 @@ export const addDueDateColumn = async (db: SQLite.SQLiteDatabase) => {
     }
 }
 
+/**
+ * Check if the database connection is accessible and healthy
+ * @param db SQLite database instance
+ * @returns true if database is accessible, false otherwise
+ */
+export const isDatabaseAccessible = async (db: SQLite.SQLiteDatabase): Promise<boolean> => {
+    try {
+        // Simple query to test connection
+        await db.getFirstAsync('SELECT 1');
+        return true;
+    } catch (error) {
+        console.error('[DatabaseUtils] Database connection check failed:', error);
+        return false;
+    }
+}
+
 
 export const addLocalRecord = async (db: SQLite.SQLiteDatabase, record: RecordType) => {
 
@@ -441,16 +457,26 @@ export const bulkUpdateRecords = async (
 ) => {
     console.log('[DatabaseUtils] bulkUpdateRecords starting transaction for', records.length, 'records');
 
-    // Validate database connection
+    // Validate database connection exists
     if (!db) {
         console.error('[DatabaseUtils] Database connection is null or undefined!');
         throw new Error('Database connection is not available');
     }
 
+    // Check if database is accessible before starting transaction
+    const isAccessible = await isDatabaseAccessible(db);
+    if (!isAccessible) {
+        console.error('[DatabaseUtils] Database is not accessible, aborting transaction');
+        throw new Error('Database is not accessible');
+    }
+
+    let transactionStarted = false;
+
     try {
         // Create a transaction
         console.log('[DatabaseUtils] Executing BEGIN TRANSACTION');
         await db.execAsync('BEGIN TRANSACTION');
+        transactionStarted = true;
         console.log('[DatabaseUtils] BEGIN TRANSACTION successful');
 
         // Loop through each record and update it
@@ -474,16 +500,36 @@ export const bulkUpdateRecords = async (
         // Commit the transaction
         console.log('[DatabaseUtils] Executing COMMIT');
         await db.execAsync('COMMIT');
+        transactionStarted = false;
         console.log('[DatabaseUtils] Transaction committed successfully');
     } catch (error) {
-        // Rollback the transaction in case of an error
-        console.error('[DatabaseUtils] Error in bulkUpdateRecords, rolling back:', error);
-        try {
-            await db.execAsync('ROLLBACK');
-            console.log('[DatabaseUtils] Transaction rolled back');
-        } catch (rollbackError) {
-            console.error('[DatabaseUtils] Error during rollback:', rollbackError);
+        console.error('[DatabaseUtils] Error in bulkUpdateRecords:', error);
+
+        // Only attempt rollback if transaction was started
+        if (transactionStarted) {
+            console.log('[DatabaseUtils] Attempting rollback...');
+            try {
+                // Check if DB is still accessible before rollback
+                const canRollback = await isDatabaseAccessible(db);
+                if (canRollback) {
+                    await db.execAsync('ROLLBACK');
+                    console.log('[DatabaseUtils] Transaction rolled back successfully');
+                } else {
+                    console.error('[DatabaseUtils] Database not accessible, cannot rollback. Transaction may be left open.');
+                    // Try to force a checkpoint to clear any locks
+                    try {
+                        await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
+                        console.log('[DatabaseUtils] WAL checkpoint executed to clear potential locks');
+                    } catch (checkpointError) {
+                        console.error('[DatabaseUtils] WAL checkpoint also failed:', checkpointError);
+                    }
+                }
+            } catch (rollbackError) {
+                console.error('[DatabaseUtils] Error during rollback:', rollbackError);
+                console.error('[DatabaseUtils] WARNING: Transaction may be left open, database may be in inconsistent state');
+            }
         }
+
         // Re-throw the error so caller knows it failed
         throw error;
     }
@@ -497,16 +543,26 @@ export const bulkUpdateWeightRecords = async (
 ) => {
     console.log('[DatabaseUtils] bulkUpdateWeightRecords starting transaction for', records.length, 'records');
 
-    // Validate database connection
+    // Validate database connection exists
     if (!db) {
         console.error('[DatabaseUtils] Database connection is null or undefined!');
         throw new Error('Database connection is not available');
     }
 
+    // Check if database is accessible before starting transaction
+    const isAccessible = await isDatabaseAccessible(db);
+    if (!isAccessible) {
+        console.error('[DatabaseUtils] Database is not accessible, aborting weight records transaction');
+        throw new Error('Database is not accessible');
+    }
+
+    let transactionStarted = false;
+
     try {
         // Create a transaction
         console.log('[DatabaseUtils] Executing BEGIN TRANSACTION for weight records');
         await db.execAsync('BEGIN TRANSACTION');
+        transactionStarted = true;
         console.log('[DatabaseUtils] BEGIN TRANSACTION successful for weight records');
 
         // Loop through each record and update it
@@ -530,16 +586,36 @@ export const bulkUpdateWeightRecords = async (
         // Commit the transaction
         console.log('[DatabaseUtils] Executing COMMIT for weight records');
         await db.execAsync('COMMIT');
+        transactionStarted = false;
         console.log('[DatabaseUtils] Weight records transaction committed successfully');
     } catch (error) {
-        // Rollback the transaction in case of an error
-        console.error('[DatabaseUtils] Error in bulkUpdateWeightRecords, rolling back:', error);
-        try {
-            await db.execAsync('ROLLBACK');
-            console.log('[DatabaseUtils] Weight records transaction rolled back');
-        } catch (rollbackError) {
-            console.error('[DatabaseUtils] Error during weight records rollback:', rollbackError);
+        console.error('[DatabaseUtils] Error in bulkUpdateWeightRecords:', error);
+
+        // Only attempt rollback if transaction was started
+        if (transactionStarted) {
+            console.log('[DatabaseUtils] Attempting weight records rollback...');
+            try {
+                // Check if DB is still accessible before rollback
+                const canRollback = await isDatabaseAccessible(db);
+                if (canRollback) {
+                    await db.execAsync('ROLLBACK');
+                    console.log('[DatabaseUtils] Weight records transaction rolled back successfully');
+                } else {
+                    console.error('[DatabaseUtils] Database not accessible, cannot rollback weight records. Transaction may be left open.');
+                    // Try to force a checkpoint to clear any locks
+                    try {
+                        await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE)');
+                        console.log('[DatabaseUtils] WAL checkpoint executed for weight records to clear potential locks');
+                    } catch (checkpointError) {
+                        console.error('[DatabaseUtils] WAL checkpoint for weight records also failed:', checkpointError);
+                    }
+                }
+            } catch (rollbackError) {
+                console.error('[DatabaseUtils] Error during weight records rollback:', rollbackError);
+                console.error('[DatabaseUtils] WARNING: Weight records transaction may be left open, database may be in inconsistent state');
+            }
         }
+
         // Re-throw the error so caller knows it failed
         throw error;
     }
