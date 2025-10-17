@@ -171,8 +171,15 @@ export const isDatabaseAccessible = async (db: SQLite.SQLiteDatabase): Promise<b
         // Simple query to test connection
         const result = await db.getFirstAsync<{ result: number }>('SELECT 1 as result');
         return result?.result === 1;
-    } catch (error) {
-        console.error('[DatabaseUtils] Database connection check failed:', error);
+    } catch (error: any) {
+        // Check if this is the NullPointerException from native layer
+        if (error?.code === 'ERR_UNEXPECTED' && error?.message?.includes('NullPointerException')) {
+            console.error('[DatabaseUtils] CRITICAL: Native database connection is null - expo-sqlite connection invalidated');
+            console.error('[DatabaseUtils] This is a known issue with expo-sqlite v15.2.14 in production builds');
+            console.error('[DatabaseUtils] The app will need to be force-closed and restarted to recover');
+        } else {
+            console.error('[DatabaseUtils] Database connection check failed:', error);
+        }
         return false;
     }
 }

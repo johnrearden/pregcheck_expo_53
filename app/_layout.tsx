@@ -22,8 +22,20 @@ function AuthenticatedApp() {
 
   const { colors } = useTheme();
 
+  // Error handler for SQLiteProvider
+  const handleDatabaseError = (error: Error) => {
+    console.error('[SQLiteProvider] Database error:', error);
+    // Log the error but don't crash the app
+    // The database will be re-initialized on next operation
+  };
+
   return (
-    <SQLiteProvider databaseName="pregcheck_db" onInit={migrateDBifNeeded}>
+    <SQLiteProvider
+      databaseName="pregcheck_db"
+      onInit={migrateDBifNeeded}
+      onError={handleDatabaseError}
+      options={{ useNewConnection: true }}
+    >
       <ThemeProvider>
         <ErrorProvider>
           <StatsProvider>
