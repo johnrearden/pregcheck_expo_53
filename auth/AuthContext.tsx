@@ -53,11 +53,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } else {
                     console.log('No token found in storage');
                     setAuthenticated(false);
-                    
-                    // Only redirect to login if not already on auth pages
-                    if (pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
-                        router.replace('/login');
-                    }
                 }
             } catch (error) {
                 console.error('Error checking token:', error);
@@ -68,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         };
 
         checkForToken();
-    }, [pathname]);
+    }, []); // Only run once on mount
 
     // Separate effect to handle redirects based on auth state
     useEffect(() => {
