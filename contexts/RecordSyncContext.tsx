@@ -50,6 +50,9 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Track if component is mounted to prevent database access after unmount
     const isMountedRef = useRef(true);
 
+    // Track authenticated state in ref for interval callback
+    const authenticatedRef = useRef(authenticated);
+
     useEffect(() => {
         sessionRunningRef.current = isSessionRunning;
     }, [isSessionRunning]);
@@ -65,6 +68,10 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     useEffect(() => {
         weightFinishingRef.current = isWeightFinishing;
     }, [isWeightFinishing]);
+
+    useEffect(() => {
+        authenticatedRef.current = authenticated;
+    }, [authenticated]);
 
     // Add AppState listener to track when app is active/background
     useEffect(() => {
@@ -222,7 +229,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             }
 
             // CRITICAL: Only check for unposted records if user is authenticated
-            if (!authenticated) {
+            if (!authenticatedRef.current) {
                 console.log('[RecordSyncContext] User not authenticated, skipping interval check');
                 return;
             }
@@ -250,7 +257,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             isMountedRef.current = false;
             clearInterval(interval);
         }
-    }, [db, isOnline, appState, authenticated, checkUnpostedRecords, checkUnpostedWeightRecords]);
+    }, [db, isOnline, appState, authenticated]);
 
 
 
