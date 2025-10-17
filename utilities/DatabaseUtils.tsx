@@ -8,10 +8,30 @@ import { parseDBRecord, parseDBWeightRecord } from './helpers';
 // DROP TABLE IF EXISTS weight_records;
 // DROP TABLE IF EXISTS weight_session;
 
+// Global flag to prevent concurrent migrations
+let migrationInProgress = false;
+let migrationPromise: Promise<void> | null = null;
+
 export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
-    console.log('[DatabaseUtils] migrateDBifNeeded started');
-    console.log('[DatabaseUtils] Database object available:', !!db);
+    console.log('[DatabaseUtils] migrateDBifNeeded called');
+    console.log('[DatabaseUtils] Migration in progress:', migrationInProgress);
     console.log('[DatabaseUtils] Timestamp:', new Date().toISOString());
+
+    // If migration is already in progress, wait for it to complete
+    if (migrationInProgress && migrationPromise) {
+        console.log('[DatabaseUtils] Migration already in progress, waiting for completion...');
+        await migrationPromise;
+        console.log('[DatabaseUtils] Previous migration completed, returning');
+        return;
+    }
+
+    // Mark migration as in progress
+    migrationInProgress = true;
+
+    // Create the migration promise
+    migrationPromise = (async () => {
+        console.log('[DatabaseUtils] Starting migration');
+        console.log('[DatabaseUtils] Database object available:', !!db);
 
     try {
         // Execute all DDL in a single batch to avoid lock contention
@@ -99,7 +119,17 @@ export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
         console.log('[DatabaseUtils] due_date column already exists, skipping migration');
     }
 
-    console.log('[DatabaseUtils] migrateDBifNeeded completed successfully');
+        console.log('[DatabaseUtils] Migration completed successfully');
+    })();
+
+    try {
+        await migrationPromise;
+    } finally {
+        // Reset flag after migration completes (success or failure)
+        migrationInProgress = false;
+        migrationPromise = null;
+        console.log('[DatabaseUtils] Migration flag reset');
+    }
 }
 
 // Debug task: Describe existing tables and their structure
