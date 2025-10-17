@@ -102,69 +102,73 @@ export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
     console.log('[DatabaseUtils] migrateDBifNeeded completed successfully');
 }
 
-    // Debug task: Describe existing tables and their structure
-    // console.log('--------- DATABASE DEBUG INFORMATION ---------');
-    
-    // try {
-    //     // Get list of all tables
-    //     const tables = await db.getAllAsync(`
-    //         SELECT name FROM sqlite_master 
-    //         WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'
-    //     `);
-        
-    //     console.log(`Found ${tables.length} tables in the database:`);
-        
-    //     // For each table, get its structure and some stats
-    //     for (const tableObj of tables) {
-    //         const tableName = (tableObj as { name: string }).name;
-    //         console.log(`\n📋 Table: ${tableName}`);
-            
-    //         // Get table schema
-    //         const tableInfo = await db.getAllAsync(`PRAGMA table_info(${tableName})`);
-    //         console.log('  Columns:');
-    //         tableInfo.forEach((column) => {
-    //             const col = column as { name: string; type: string; pk: number; notnull: number };
-    //             console.log(`    - ${col.name} (${col.type})${col.pk ? ' PRIMARY KEY' : ''}${col.notnull ? ' NOT NULL' : ''}`);
-    //         });
-            
-    //         // Get row count
-    //         const countResult = await db.getFirstAsync(`SELECT COUNT(*) as count FROM ${tableName}`);
-    //         console.log(`  Row count: ${(countResult as { count: number }).count}`);
-            
-    //         // If table has records, show sample
-    //         if ((countResult as { count: number }).count > 0) {
-    //             const sample = await db.getFirstAsync(`SELECT * FROM ${tableName} LIMIT 1`);
-    //             console.log('  Sample record:');
-    //             console.log('  ', JSON.stringify(sample, null, 2).replace(/\n/g, '\n  '));
-    //         }
-            
-    //         // For tables with specific relationships, show more info
-    //         if (tableName === 'records' || tableName === 'weight_records') {
-    //             // Count records with server_id (synced)
-    //             const syncedCount = await db.getFirstAsync(
-    //                 `SELECT COUNT(*) as count FROM ${tableName} WHERE server_id IS NOT NULL AND server_id > 0`
-    //             );
-    //             console.log(`  Synced records: ${(syncedCount as { count: number }).count}`);
-                
-    //             // Count records without server_id (unsynced)
-    //             const unsyncedCount = await db.getFirstAsync(
-    //                 `SELECT COUNT(*) as count FROM ${tableName} WHERE server_id IS NULL OR server_id = 0`
-    //             );
-    //             console.log(`  Unsynced records: ${(unsyncedCount as { count: number }).count}`);
-                
-    //             // Count unique sessions
-    //             const sessionCount = await db.getFirstAsync(
-    //                 `SELECT COUNT(DISTINCT device_session_id) as count FROM ${tableName}`
-    //             );
-    //             console.log(`  Unique sessions: ${(sessionCount as { count: number }).count}`);
-    //         }
-    //     }
-        
-    //     console.log('\n--------- END DATABASE DEBUG INFORMATION ---------');
-    // } catch (error) {
-    //     console.error('Error while generating database debug information:', error);
-    // }
+// Debug task: Describe existing tables and their structure
+// (This commented code was used for debugging - kept for future reference)
+/*
+export const debugDatabaseStructure = async (db: SQLite.SQLiteDatabase) => {
+    console.log('--------- DATABASE DEBUG INFORMATION ---------');
+
+    try {
+        // Get list of all tables
+        const tables = await db.getAllAsync(`
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'android_%'
+        `);
+
+        console.log(`Found ${tables.length} tables in the database:`);
+
+        // For each table, get its structure and some stats
+        for (const tableObj of tables) {
+            const tableName = (tableObj as { name: string }).name;
+            console.log(`\n📋 Table: ${tableName}`);
+
+            // Get table schema
+            const tableInfo = await db.getAllAsync(`PRAGMA table_info(${tableName})`);
+            console.log('  Columns:');
+            tableInfo.forEach((column) => {
+                const col = column as { name: string; type: string; pk: number; notnull: number };
+                console.log(`    - ${col.name} (${col.type})${col.pk ? ' PRIMARY KEY' : ''}${col.notnull ? ' NOT NULL' : ''}`);
+            });
+
+            // Get row count
+            const countResult = await db.getFirstAsync(`SELECT COUNT(*) as count FROM ${tableName}`);
+            console.log(`  Row count: ${(countResult as { count: number }).count}`);
+
+            // If table has records, show sample
+            if ((countResult as { count: number }).count > 0) {
+                const sample = await db.getFirstAsync(`SELECT * FROM ${tableName} LIMIT 1`);
+                console.log('  Sample record:');
+                console.log('  ', JSON.stringify(sample, null, 2).replace(/\n/g, '\n  '));
+            }
+
+            // For tables with specific relationships, show more info
+            if (tableName === 'records' || tableName === 'weight_records') {
+                // Count records with server_id (synced)
+                const syncedCount = await db.getFirstAsync(
+                    `SELECT COUNT(*) as count FROM ${tableName} WHERE server_id IS NOT NULL AND server_id > 0`
+                );
+                console.log(`  Synced records: ${(syncedCount as { count: number }).count}`);
+
+                // Count records without server_id (unsynced)
+                const unsyncedCount = await db.getFirstAsync(
+                    `SELECT COUNT(*) as count FROM ${tableName} WHERE server_id IS NULL OR server_id = 0`
+                );
+                console.log(`  Unsynced records: ${(unsyncedCount as { count: number }).count}`);
+
+                // Count unique sessions
+                const sessionCount = await db.getFirstAsync(
+                    `SELECT COUNT(DISTINCT device_session_id) as count FROM ${tableName}`
+                );
+                console.log(`  Unique sessions: ${(sessionCount as { count: number }).count}`);
+            }
+        }
+
+        console.log('\n--------- END DATABASE DEBUG INFORMATION ---------');
+    } catch (error) {
+        console.error('Error while generating database debug information:', error);
+    }
 }
+*/
 
 // Add a due_date column to the records table if it doesn't exist
 export const addDueDateColumn = async (db: SQLite.SQLiteDatabase) => {
