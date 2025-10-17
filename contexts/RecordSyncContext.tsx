@@ -7,6 +7,7 @@ import { trySync, checkForPendingRecords, checkForPendingWeightRecords } from '@
 import { RecordType, usePersistRecord } from './RecordContext';
 import { WeightRecordType, useWeightRecordMethod } from './WeightRecordContext';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/auth/AuthContext';
 
 interface RecordSyncContextType {
     hasUnpostedRecords: boolean;
@@ -28,7 +29,9 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     console.log('[RecordSyncContext] RecordSyncProvider mounting');
 
     const db = useSQLiteContext();
+    const { authenticated, isLoading: authLoading } = useAuth();
     console.log('[RecordSyncContext] useSQLiteContext returned:', !!db);
+    console.log('[RecordSyncContext] Auth state - authenticated:', authenticated, 'loading:', authLoading);
     if (!db) {
         console.warn('[RecordSyncContext] SQLite context is not available yet!');
     }
@@ -86,6 +89,13 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             return;
         }
 
+        // CRITICAL: Only check for unposted records if user is authenticated
+        // On fresh install, user hasn't logged in yet, so no records exist
+        if (!authenticated) {
+            console.log('[RecordSyncContext] User not authenticated, skipping unposted records check');
+            return;
+        }
+
         if (!db) {
             console.warn('[RecordSyncContext] Database is not available yet!');
             return;
@@ -110,12 +120,19 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.error('[RecordSyncContext] CRITICAL ERROR checking for unposted records:', error);
             console.error('[RecordSyncContext] AppState during error:', appState);
         }
-    }, [db, appState, isSessionRunning])
+    }, [db, appState, isSessionRunning, authenticated])
 
     const checkUnpostedWeightRecords = useCallback( async () => {
         // CRITICAL: Do not access database if component is unmounted
         if (!isMountedRef.current) {
             console.log('[RecordSyncContext] Component unmounted, skipping weight records check');
+            return;
+        }
+
+        // CRITICAL: Only check for unposted records if user is authenticated
+        // On fresh install, user hasn't logged in yet, so no records exist
+        if (!authenticated) {
+            console.log('[RecordSyncContext] User not authenticated, skipping weight records check');
             return;
         }
 
@@ -143,7 +160,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.error('[RecordSyncContext] CRITICAL ERROR checking for unposted weight records:', error);
             console.error('[RecordSyncContext] AppState during error:', appState);
         }
-    }, [db, appState, isWeightSessionRunning])
+    }, [db, appState, isWeightSessionRunning, authenticated])
 
     // Sync records with the server
     const syncRecords = async () => {
@@ -187,18 +204,26 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Check for unposted records periodically
     useEffect(() => {
-        console.log('[RecordSyncContext] Initializing periodic check interval, AppState:', appState, 'DB available:', !!db);
+        console.log('[RecordSyncContext] Initializing periodic check interval, AppState:', appState, 'DB available:', !!db, 'Authenticated:', authenticated);
 
-        // Initial check (only if app is active AND database is available)
-        if (appState === 'active' && db) {
+        // Initial check (only if app is active AND database is available AND user is authenticated)
+        if (appState === 'active' && db && authenticated) {
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
+        } else {
+            console.log('[RecordSyncContext] Skipping initial check - appState:', appState, 'db:', !!db, 'authenticated:', authenticated);
         }
 
         const interval = setInterval(() => {
             // CRITICAL: Do not run interval callback if component is unmounted
             if (!isMountedRef.current) {
                 console.log('[RecordSyncContext] Component unmounted, skipping interval check');
+                return;
+            }
+
+            // CRITICAL: Only check for unposted records if user is authenticated
+            if (!authenticated) {
+                console.log('[RecordSyncContext] User not authenticated, skipping interval check');
                 return;
             }
 
