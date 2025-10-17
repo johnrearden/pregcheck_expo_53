@@ -9,71 +9,66 @@ import { parseDBRecord, parseDBWeightRecord } from './helpers';
 // DROP TABLE IF EXISTS weight_session;
 
 export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
-    // Set WAL mode ONCE at the beginning to avoid lock contention
-    // Multiple PRAGMA journal_mode calls can cause "database is locked" errors
-    await db.execAsync('PRAGMA journal_mode = WAL;');
-    console.log('[DatabaseUtils] WAL mode enabled');
-
+    // Execute all DDL in a single batch to avoid lock contention
+    // Setting WAL mode and creating tables in one execAsync call ensures atomicity
     await db.execAsync(`
-CREATE TABLE IF NOT EXISTS records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    owner INTEGER,
-    date TEXT,
-    animal TEXT,
-    gestation_days INTEGER,
-    tag TEXT,
-    due_date TEXT,
-    days_pregnant INTEGER,
-    time_unit TEXT,
-    calf_count INTEGER,
-    pregnancy_status BOOLEAN,
-    note TEXT,
-    updated_at TEXT,
-    server_session_id INTEGER,
-    server_id INTEGER,
-    device_session_id INTEGER
-    );`
-    );
+        PRAGMA journal_mode = WAL;
 
-    await db.execAsync(`
-CREATE TABLE IF NOT EXISTS sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    vet_name TEXT,
-    server_session_id INTEGER,
-    record_count INTEGER
-    );`
-    );
+        CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner INTEGER,
+            date TEXT,
+            animal TEXT,
+            gestation_days INTEGER,
+            tag TEXT,
+            due_date TEXT,
+            days_pregnant INTEGER,
+            time_unit TEXT,
+            calf_count INTEGER,
+            pregnancy_status BOOLEAN,
+            note TEXT,
+            updated_at TEXT,
+            server_session_id INTEGER,
+            server_id INTEGER,
+            device_session_id INTEGER
+        );
 
-    await db.execAsync(`
-CREATE TABLE IF NOT EXISTS weight_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    owner INTEGER,
-    tag TEXT,
-    date TEXT,
-    weight REAL,
-    sex TEXT,
-    weight_unit TEXT,
-    age_in_days INTEGER,
-    animal TEXT,
-    time_unit TEXT,
-    note TEXT,
-    updated_at TEXT,
-    server_session_id INTEGER,
-    server_id INTEGER,
-    device_session_id INTEGER
-    );`
-    );
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            vet_name TEXT,
+            server_session_id INTEGER,
+            record_count INTEGER
+        );
 
-    await db.execAsync(`
-CREATE TABLE IF NOT EXISTS weight_session (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT,
-    vet_name TEXT,
-    server_session_id INTEGER,
-    record_count INTEGER
-    );`
-    );
+        CREATE TABLE IF NOT EXISTS weight_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner INTEGER,
+            tag TEXT,
+            date TEXT,
+            weight REAL,
+            sex TEXT,
+            weight_unit TEXT,
+            age_in_days INTEGER,
+            animal TEXT,
+            time_unit TEXT,
+            note TEXT,
+            updated_at TEXT,
+            server_session_id INTEGER,
+            server_id INTEGER,
+            device_session_id INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS weight_session (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            vet_name TEXT,
+            server_session_id INTEGER,
+            record_count INTEGER
+        );
+    `);
+
+    console.log('[DatabaseUtils] Database schema initialized with WAL mode');
 
     // Check if the due_date column exists in the records table
     const columnInfo = await db.getAllAsync(`
