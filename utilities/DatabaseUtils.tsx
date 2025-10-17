@@ -9,9 +9,12 @@ import { parseDBRecord, parseDBWeightRecord } from './helpers';
 // DROP TABLE IF EXISTS weight_session;
 
 export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
+    // Set WAL mode ONCE at the beginning to avoid lock contention
+    // Multiple PRAGMA journal_mode calls can cause "database is locked" errors
+    await db.execAsync('PRAGMA journal_mode = WAL;');
+    console.log('[DatabaseUtils] WAL mode enabled');
 
     await db.execAsync(`
-PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner INTEGER,
@@ -33,7 +36,6 @@ CREATE TABLE IF NOT EXISTS records (
     );
 
     await db.execAsync(`
-PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
@@ -44,7 +46,6 @@ CREATE TABLE IF NOT EXISTS sessions (
     );
 
     await db.execAsync(`
-PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS weight_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner INTEGER,
@@ -65,7 +66,6 @@ CREATE TABLE IF NOT EXISTS weight_records (
     );
 
     await db.execAsync(`
-PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS weight_session (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT,
@@ -151,10 +151,8 @@ CREATE TABLE IF NOT EXISTS weight_session (
 // Add a due_date column to the records table if it doesn't exist
 export const addDueDateColumn = async (db: SQLite.SQLiteDatabase) => {
     try {
-        await db.execAsync(`
-            PRAGMA journal_mode = WAL;
-            ALTER TABLE records ADD COLUMN due_date TEXT;
-        `);
+        // WAL mode is already set in migrateDBifNeeded() - don't set it again
+        await db.execAsync(`ALTER TABLE records ADD COLUMN due_date TEXT;`);
         console.log('Due date column added to records table');
     } catch (error) {
         console.error('Error adding due date column:', error);

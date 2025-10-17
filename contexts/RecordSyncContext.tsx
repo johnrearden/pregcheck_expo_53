@@ -41,6 +41,9 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const weightSessionRunningRef = useRef(isWeightSessionRunning);
     const weightFinishingRef = useRef(isWeightFinishing);
 
+    // Track if component is mounted to prevent database access after unmount
+    const isMountedRef = useRef(true);
+
     useEffect(() => {
         sessionRunningRef.current = isSessionRunning;
     }, [isSessionRunning]);
@@ -74,6 +77,11 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Check for unposted records
     const checkUnpostedRecords = useCallback( async () => {
+        // CRITICAL: Do not access database if component is unmounted
+        if (!isMountedRef.current) {
+            console.log('[RecordSyncContext] Component unmounted, skipping unposted records check');
+            return;
+        }
 
         if (!db) {
             console.warn('[RecordSyncContext] Database is not available yet!');
@@ -90,8 +98,10 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         try {
             const unpostedRecords: RecordType[] = await checkForPendingRecords(db);
-            setHasUnpostedRecords(unpostedRecords.length > 0);
-            console.log('[RecordSyncContext] Unposted records:', unpostedRecords.length);
+            if (isMountedRef.current) {
+                setHasUnpostedRecords(unpostedRecords.length > 0);
+                console.log('[RecordSyncContext] Unposted records:', unpostedRecords.length);
+            }
             return unpostedRecords;
         } catch (error) {
             console.error('[RecordSyncContext] CRITICAL ERROR checking for unposted records:', error);
@@ -100,6 +110,12 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [db, appState, isSessionRunning])
 
     const checkUnpostedWeightRecords = useCallback( async () => {
+        // CRITICAL: Do not access database if component is unmounted
+        if (!isMountedRef.current) {
+            console.log('[RecordSyncContext] Component unmounted, skipping weight records check');
+            return;
+        }
+
         if (!db) {
             console.warn('[RecordSyncContext] Database is not available yet!');
             return;
@@ -115,8 +131,10 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         try {
             const unpostedWeightRecords: WeightRecordType[] = await checkForPendingWeightRecords(db);
-            setHasUnpostedWeightRecords(unpostedWeightRecords.length > 0);
-            console.log('[RecordSyncContext] Unposted weight records:', unpostedWeightRecords.length);
+            if (isMountedRef.current) {
+                setHasUnpostedWeightRecords(unpostedWeightRecords.length > 0);
+                console.log('[RecordSyncContext] Unposted weight records:', unpostedWeightRecords.length);
+            }
             return unpostedWeightRecords;
         } catch (error) {
             console.error('[RecordSyncContext] CRITICAL ERROR checking for unposted weight records:', error);
@@ -166,15 +184,21 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Check for unposted records periodically
     useEffect(() => {
-        console.log('[RecordSyncContext] Initializing periodic check interval, AppState:', appState);
+        console.log('[RecordSyncContext] Initializing periodic check interval, AppState:', appState, 'DB available:', !!db);
 
-        // Initial check (only if app is active)
-        if (appState === 'active') {
+        // Initial check (only if app is active AND database is available)
+        if (appState === 'active' && db) {
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
         }
 
         const interval = setInterval(() => {
+            // CRITICAL: Do not run interval callback if component is unmounted
+            if (!isMountedRef.current) {
+                console.log('[RecordSyncContext] Component unmounted, skipping interval check');
+                return;
+            }
+
             console.log('[RecordSyncContext] Interval fired, AppState:', appState);
 
             // CRITICAL: Skip if app is not active (backgrounded)
@@ -194,7 +218,8 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }, 60 * 1000); // Check every minute
 
         return () => {
-            console.log('[RecordSyncContext] Clearing interval');
+            console.log('[RecordSyncContext] Clearing interval and marking as unmounted');
+            isMountedRef.current = false;
             clearInterval(interval);
         }
     }, [db, isOnline, appState]);
