@@ -19,6 +19,7 @@ import { initializeAds } from '../services/adService';
 
 // Create a separate component for handling auth routing
 function AuthenticatedApp() {
+  console.log('[_layout] AuthenticatedApp function re-executed');
   console.log('[_layout] AuthenticatedApp component rendering');
 
   const { colors } = useTheme();
@@ -86,6 +87,7 @@ function AuthenticatedApp() {
 }
 
 export default function Layout() {
+  console.log('[_layout] Layout function re-executed');
   console.log('[_layout] Root Layout component rendering');
 
   const [fontsLoaded] = useFonts({

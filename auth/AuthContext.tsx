@@ -38,6 +38,8 @@ interface AuthProviderProps {
 
 // AuthProvider component that provides authentication context to the application
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+    console.log('[AuthContext] AuthProvider rendering');
+
     const [isLoading, setIsLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
     const router = useRouter();
@@ -64,15 +66,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         checkForToken();
     }, []); // Only run once on mount
-
-    // Separate effect to handle redirects based on auth state
-    useEffect(() => {
-        if (!isLoading) {
-            if (!authenticated && pathname !== '/login' && pathname !== '/register') {
-                router.replace('/login');
-            }
-        }
-    }, [authenticated, isLoading, pathname]);
 
     const login = async (username: string, password: string) => {
         try {
@@ -239,13 +232,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         router.replace('/login');
     };
 
+    console.log('[AuthContext] AuthProvider value object created:', { authenticated, isLoading, pathname });
+
     return (
         <AuthContext.Provider value={{
-            login, 
-            register, 
-            logout, 
-            requestPasswordReset, 
-            confirmPasswordReset, 
+            login,
+            register,
+            logout,
+            requestPasswordReset,
+            confirmPasswordReset,
             authenticated,
             isLoading
         }}>
