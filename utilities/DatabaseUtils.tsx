@@ -9,12 +9,18 @@ import { parseDBRecord, parseDBWeightRecord } from './helpers';
 // DROP TABLE IF EXISTS weight_session;
 
 export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
-    // Execute all DDL in a single batch to avoid lock contention
-    // Setting WAL mode and creating tables in one execAsync call ensures atomicity
-    await db.execAsync(`
-        PRAGMA journal_mode = WAL;
+    console.log('[DatabaseUtils] migrateDBifNeeded started');
+    console.log('[DatabaseUtils] Database object available:', !!db);
+    console.log('[DatabaseUtils] Timestamp:', new Date().toISOString());
 
-        CREATE TABLE IF NOT EXISTS records (
+    try {
+        // Execute all DDL in a single batch to avoid lock contention
+        // Setting WAL mode and creating tables in one execAsync call ensures atomicity
+        console.log('[DatabaseUtils] Executing batched DDL statements...');
+        await db.execAsync(`
+            PRAGMA journal_mode = WAL;
+
+            CREATE TABLE IF NOT EXISTS records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             owner INTEGER,
             date TEXT,
@@ -68,16 +74,33 @@ export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
         );
     `);
 
-    console.log('[DatabaseUtils] Database schema initialized with WAL mode');
+        console.log('[DatabaseUtils] ✅ Batched DDL execution completed successfully');
+        console.log('[DatabaseUtils] Database schema initialized with WAL mode');
+
+    } catch (error) {
+        console.error('[DatabaseUtils] ❌ CRITICAL: DDL execution failed:', error);
+        console.error('[DatabaseUtils] Error code:', (error as any)?.code);
+        console.error('[DatabaseUtils] Error message:', (error as any)?.message);
+        throw error; // Re-throw to let SQLiteProvider handle it
+    }
 
     // Check if the due_date column exists in the records table
+    console.log('[DatabaseUtils] Checking for due_date column...');
     const columnInfo = await db.getAllAsync(`
         PRAGMA table_info(records);
     `);
     const columnExists = columnInfo.some((column: any) => column.name === 'due_date');
+    console.log('[DatabaseUtils] due_date column exists:', columnExists);
+
     if (!columnExists) {
+        console.log('[DatabaseUtils] Adding due_date column...');
         addDueDateColumn(db);
+    } else {
+        console.log('[DatabaseUtils] due_date column already exists, skipping migration');
     }
+
+    console.log('[DatabaseUtils] migrateDBifNeeded completed successfully');
+}
 
     // Debug task: Describe existing tables and their structure
     // console.log('--------- DATABASE DEBUG INFORMATION ---------');

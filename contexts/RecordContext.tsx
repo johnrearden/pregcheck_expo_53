@@ -108,11 +108,14 @@ export const useRecord = () => useContext(RecordContext);
 export const usePersistRecord = () => useContext(PersistRecordContext);
 
 export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    console.log('[RecordContext] RecordProvider mounting');
+
     // Use StatsContext and ErrorContext
     const { stats, calculateStats, resetStats } = useStats();
     const showToast = useToast();
 
     const db = useSQLiteContext();
+    console.log('[RecordContext] useSQLiteContext returned:', !!db);
 
     // Set the initial default state of the record
     const [record, setRecord] = useState<RecordType>(initialRecord);
@@ -131,11 +134,15 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [recordList, setRecordList] = useState<RecordType[]>([]);
 
     useEffect(() => {
+        console.log('[RecordContext] useEffect (loadSession) triggered');
+
         // Load the session from AsyncStorage when the component mounts
         const loadSession = async () => {
             try {
+                console.log('[RecordContext] Checking AsyncStorage for existing session...');
                 const sessionData = await AsyncStorage.getItem(PREG_SESSION_KEY);
                 if (sessionData) {
+                    console.log('[RecordContext] Found existing session in AsyncStorage');
                     const session: AsyncStorageSession = JSON.parse(sessionData);
                     console.log('Retrieved session from AsyncStorage:', session);
                     const session_id = session.device_session_pk;
@@ -149,14 +156,29 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                         }));
                     }
                     // Load the records associated with the session
-                    const records = await getRecordsForSession(db, session_id);
-                    if (records) {
-                        setRecordList(records);
-                        calculateStats(records);
+                    // CRITICAL: Only access database if it's available
+                    if (db) {
+                        console.log('[RecordContext] Database available, loading records for session:', session_id);
+                        try {
+                            const records = await getRecordsForSession(db, session_id);
+                            console.log('[RecordContext] Successfully loaded', records?.length || 0, 'records');
+                            if (records) {
+                                setRecordList(records);
+                                calculateStats(records);
+                            }
+                        } catch (error) {
+                            console.error('[RecordContext] FAILED to load records on mount:', error);
+                            console.error('[RecordContext] Error code:', (error as any)?.code);
+                            console.error('[RecordContext] Error message:', (error as any)?.message);
+                        }
+                    } else {
+                        console.warn('[RecordContext] Database not available yet, skipping record load');
                     }
+                } else {
+                    console.log('[RecordContext] No existing session found in AsyncStorage');
                 }
             } catch (error) {
-                console.error("Error loading session from AsyncStorage:", error);
+                console.error('[RecordContext] Error loading session from AsyncStorage:', error);
             }
         };
 

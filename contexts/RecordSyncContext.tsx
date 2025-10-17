@@ -25,9 +25,12 @@ const RecordSyncContext = createContext<RecordSyncContextType>({
 export const useRecordSync = () => useContext(RecordSyncContext);
 
 export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    console.log('[RecordSyncContext] RecordSyncProvider mounting');
+
     const db = useSQLiteContext();
+    console.log('[RecordSyncContext] useSQLiteContext returned:', !!db);
     if (!db) {
-        console.warn('SQLite context is not available yet!');
+        console.warn('[RecordSyncContext] SQLite context is not available yet!');
     }
     const [hasUnpostedRecords, setHasUnpostedRecords] = useState(false);
     const [hasUnpostedWeightRecords, setHasUnpostedWeightRecords] = useState(false);

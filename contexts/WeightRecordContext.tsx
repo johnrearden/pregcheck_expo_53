@@ -121,6 +121,7 @@ export const useWeightRecord = () => useContext(WeightRecordContext);
 export const useWeightRecordMethod = () => useContext(WeightRecordMethodContext);
 
 export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    console.log('[WeightRecordContext] WeightRecordProvider mounting');
 
     // Set the initial state of the weight record
     const [weightRecord, setWeightRecord] = useState<WeightRecordType>(initialRecord);
@@ -137,6 +138,7 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Get a reference to the SQLite database
     const db = useSQLiteContext();
+    console.log('[WeightRecordContext] useSQLiteContext returned:', !!db);
 
     const showToast = useToast();
 
@@ -156,10 +158,14 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Check for the existence of a session in AsyncStorage on mount
     useEffect(() => {
+        console.log('[WeightRecordContext] useEffect (loadSession) triggered');
+
         const loadSession = async () => {
             try {
+                console.log('[WeightRecordContext] Checking AsyncStorage for existing session...');
                 const sessionData = await AsyncStorage.getItem(WEIGHT_SESSION_KEY);
                 if (sessionData) {
+                    console.log('[WeightRecordContext] Found existing session in AsyncStorage');
                     const session = JSON.parse(sessionData);
                     setSessionID(session.device_session_pk);
                     setSessionRunning(true);
@@ -170,16 +176,31 @@ export const WeightRecordProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     }));
 
                     // Load the weight records for this session
-                    const records = await getRecordsForWeightSession(
-                        db,
-                        session.device_session_pk
-                    )
-                    if (records) {
-                        setWeightRecordList(records);
+                    // CRITICAL: Only access database if it's available
+                    if (db) {
+                        console.log('[WeightRecordContext] Database available, loading records for session:', session.device_session_pk);
+                        try {
+                            const records = await getRecordsForWeightSession(
+                                db,
+                                session.device_session_pk
+                            )
+                            console.log('[WeightRecordContext] Successfully loaded', records?.length || 0, 'records');
+                            if (records) {
+                                setWeightRecordList(records);
+                            }
+                        } catch (error) {
+                            console.error('[WeightRecordContext] FAILED to load records on mount:', error);
+                            console.error('[WeightRecordContext] Error code:', (error as any)?.code);
+                            console.error('[WeightRecordContext] Error message:', (error as any)?.message);
+                        }
+                    } else {
+                        console.warn('[WeightRecordContext] Database not available yet, skipping record load');
                     }
+                } else {
+                    console.log('[WeightRecordContext] No existing session found in AsyncStorage');
                 }
             } catch (error: any) {
-                console.error("Error loading session from AsyncStorage:", error);
+                console.error('[WeightRecordContext] Error loading session from AsyncStorage:', error);
             }
         }
         loadSession();

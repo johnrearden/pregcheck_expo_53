@@ -19,15 +19,34 @@ import { initializeAds } from '../services/adService';
 
 // Create a separate component for handling auth routing
 function AuthenticatedApp() {
+  console.log('[_layout] AuthenticatedApp component rendering');
 
   const { colors } = useTheme();
 
   // Error handler for SQLiteProvider
   const handleDatabaseError = (error: Error) => {
-    console.error('[SQLiteProvider] Database error:', error);
+    // WAL mode switching can cause transient "database is locked" errors during initialization
+    // These are safe to ignore as the operation retries and succeeds
+    const errorMessage = error?.message || '';
+    const errorCode = (error as any)?.code;
+
+    console.error('[SQLiteProvider] Database error caught:', {
+      code: errorCode,
+      message: errorMessage,
+      timestamp: new Date().toISOString()
+    });
+
+    if (errorCode === 'ERR_INTERNAL_SQLITE_ERROR' && errorMessage.includes('database is locked')) {
+      console.warn('[SQLiteProvider] Transient database lock during WAL initialization (safe to ignore)');
+      return;
+    }
+
+    console.error('[SQLiteProvider] Non-transient database error:', error);
     // Log the error but don't crash the app
     // The database will be re-initialized on next operation
   };
+
+  console.log('[_layout] Rendering SQLiteProvider with options:', { useNewConnection: true });
 
   return (
     <SQLiteProvider
@@ -67,24 +86,35 @@ function AuthenticatedApp() {
 }
 
 export default function Layout() {
+  console.log('[_layout] Root Layout component rendering');
+
   const [fontsLoaded] = useFonts({
     'Nunito': require('../assets/fonts/Nunito-VariableFont_wght.ttf'),
   });
 
+  console.log('[_layout] Fonts loaded:', fontsLoaded);
+
   // Initialize ads when the app starts
   useEffect(() => {
+    console.log('[_layout] useEffect triggered, fontsLoaded:', fontsLoaded);
+
     if (!fontsLoaded) {
+      console.log('[_layout] Fonts not loaded yet, skipping ads initialization');
       return;
     }
 
+    console.log('[_layout] Initializing ads...');
     initializeAds()
-      .then(() => console.log('Ads initialized successfully'))
-      .catch(error => console.warn('Ads initialization error:', error));
+      .then(() => console.log('[_layout] Ads initialized successfully'))
+      .catch(error => console.warn('[_layout] Ads initialization error:', error));
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
+    console.log('[_layout] Fonts not loaded, returning null (loading screen)');
     return null;
   }
+
+  console.log('[_layout] Rendering app providers');
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
