@@ -250,7 +250,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             isMountedRef.current = false;
             clearInterval(interval);
         }
-    }, [db, isOnline, appState]);
+    }, [db, isOnline, appState, authenticated, checkUnpostedRecords, checkUnpostedWeightRecords]);
 
 
 
