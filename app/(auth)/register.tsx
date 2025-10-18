@@ -147,6 +147,7 @@ const RegisterPage = () => {
                     }}
                     value={username}
                     placeholder="Username"
+                    placeholderTextColor={colors.fgColor}
                     autoCapitalize="none"
                 />
                 {errors.username ? (
@@ -169,6 +170,7 @@ const RegisterPage = () => {
                     }}
                     value={email}
                     placeholder="Email"
+                    placeholderTextColor={colors.fgColor}
                     keyboardType="email-address"
                     autoCapitalize="none"
                 />
@@ -193,6 +195,7 @@ const RegisterPage = () => {
                         }}
                         value={password1}
                         placeholder="Password"
+                        placeholderTextColor={colors.fgColor}
                         secureTextEntry={!showPassword1}
                         autoCapitalize="none"
                     />
@@ -234,6 +237,7 @@ const RegisterPage = () => {
                         }}
                         value={password2}
                         placeholder="Confirm Password"
+                        placeholderTextColor={colors.fgColor}
                         secureTextEntry={!showPassword2}
                         autoCapitalize="none"
                     />

@@ -121,6 +121,7 @@ const LoginPage = () => {
                         }}
                         value={username}
                         placeholder="Username"
+                        placeholderTextColor={colors.fgColor}
                         testID="login-username-input"
                         autoCapitalize="none"
                     />
@@ -143,6 +144,7 @@ const LoginPage = () => {
                         }}
                         value={password}
                         placeholder="Password"
+                        placeholderTextColor={colors.fgColor}
                         secureTextEntry={!showPassword}
                         testID="login-password-input"
                         autoCapitalize="none"
@@ -267,6 +269,7 @@ const LoginPage = () => {
                                 }}
                                 value={resetEmail}
                                 placeholder="Email address"
+                                placeholderTextColor={colors.fgColor}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                             />
