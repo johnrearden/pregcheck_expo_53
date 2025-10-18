@@ -46,20 +46,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const pathname = usePathname();
 
     useEffect(() => {
+        console.log('[AuthContext] checkForToken useEffect triggered');
         const checkForToken = async () => {
+            console.log('[AuthContext] checkForToken starting...');
             try {
                 const token = await getStoredToken();
                 if (token) {
+                    console.log('[AuthContext] Token found, setting authenticated=true');
                     setAuthenticated(true);
-                    console.log('Token found:', token);
                 } else {
-                    console.log('No token found in storage');
+                    console.log('[AuthContext] No token found in storage, setting authenticated=false');
                     setAuthenticated(false);
                 }
             } catch (error) {
-                console.error('Error checking token:', error);
+                console.error('[AuthContext] Error checking token:', error);
                 setAuthenticated(false);
             } finally {
+                console.log('[AuthContext] checkForToken complete, setting isLoading=false');
                 setIsLoading(false);
             }
         };

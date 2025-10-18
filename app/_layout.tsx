@@ -24,26 +24,10 @@ function AuthenticatedApp() {
   console.log('[_layout] AuthenticatedApp component rendering');
 
   const { colors } = useTheme();
-  const [dbKey, setDbKey] = useState(0);
 
-  // Monitor AppState and force DB remount when returning from background
-  useEffect(() => {
-    console.log('[_layout] Setting up AppState listener for database reconnection');
-
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      console.log('[_layout] AppState changed to:', nextAppState);
-
-      if (nextAppState === 'active') {
-        console.log('[_layout] App returned to foreground - forcing database reconnection');
-        setDbKey(prev => prev + 1);
-      }
-    });
-
-    return () => {
-      console.log('[_layout] Cleaning up AppState listener');
-      subscription.remove();
-    };
-  }, []);
+  // NOTE: Removed database reconnection logic on app resume
+  // expo-sqlite with WAL mode handles backgrounding correctly
+  // Forced reconnection was causing auth redirect issues
 
   // Error handler for SQLiteProvider
   const handleDatabaseError = (error: Error) => {
@@ -68,15 +52,13 @@ function AuthenticatedApp() {
     // The database will be re-initialized on next operation
   };
 
-  console.log('[_layout] Rendering SQLiteProvider with options:', { useNewConnection: true, dbKey });
+  console.log('[_layout] Rendering SQLiteProvider');
 
   return (
     <SQLiteProvider
-      key={dbKey}
       databaseName="pregcheck_db"
       onInit={migrateDBifNeeded}
       onError={handleDatabaseError}
-      options={{ useNewConnection: true }}
     >
       <ThemeProvider>
         <ErrorProvider>
