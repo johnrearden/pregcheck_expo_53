@@ -1,13 +1,13 @@
+import { useSQLiteContext } from 'expo-sqlite';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useSQLiteContext } from 'expo-sqlite';
 //@ts-ignore
+import { useAuth } from '@/auth/AuthContext';
+import { useToast } from '@/hooks/useToast';
+import { checkForPendingRecords, checkForPendingWeightRecords, trySync } from '@/services/RecordSyncService';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { trySync, checkForPendingRecords, checkForPendingWeightRecords } from '@/services/RecordSyncService';
 import { RecordType, usePersistRecord } from './RecordContext';
 import { WeightRecordType, useWeightRecordMethod } from './WeightRecordContext';
-import { useToast } from '@/hooks/useToast';
-import { useAuth } from '@/auth/AuthContext';
 
 interface RecordSyncContextType {
     hasUnpostedRecords: boolean;
@@ -247,7 +247,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log('[RecordSyncContext] Executing periodic sync check...');
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
-        }, 10 * 1000); // Check every 10 seconds (temporary for testing)
+        }, 60 * 1000); // Check every 60 seconds
 
         return () => {
             console.log('[RecordSyncContext] Clearing interval (effect cleanup)');
