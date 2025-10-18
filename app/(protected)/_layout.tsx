@@ -4,11 +4,13 @@ import { useEffect } from 'react';
 
 
 export default function ProtectedLayout() {
-    const { authenticated } = useAuth();
+    const { authenticated, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!authenticated) {
+        // Only redirect if auth check is complete AND user is not authenticated
+        // This prevents redirect during the async token check on app resume
+        if (!isLoading && !authenticated) {
             console.log('User is not authenticated, redirecting to login');
             try {
                 router.replace('/(auth)/login');
@@ -17,9 +19,10 @@ export default function ProtectedLayout() {
             }
 
         }
-    }, [authenticated, router]);
+    }, [authenticated, isLoading, router]);
 
-    if (!authenticated) {
+    // Show nothing while checking authentication status
+    if (isLoading || !authenticated) {
         return null; // or a loading spinner
     }
     return (
