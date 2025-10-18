@@ -50,6 +50,16 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Track if component is mounted to prevent database access after unmount
     const isMountedRef = useRef(true);
 
+    // Track component mount/unmount separately from other effects
+    useEffect(() => {
+        console.log('[RecordSyncContext] Component mounted, setting isMountedRef to true');
+        isMountedRef.current = true;
+        return () => {
+            console.log('[RecordSyncContext] Component unmounting, setting isMountedRef to false');
+            isMountedRef.current = false;
+        };
+    }, []); // Empty dependency array - runs only on mount/unmount
+
     useEffect(() => {
         sessionRunningRef.current = isSessionRunning;
     }, [isSessionRunning]);
@@ -237,11 +247,10 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log('[RecordSyncContext] Executing periodic sync check...');
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
-        }, 60 * 1000); // Check every minute
+        }, 10 * 1000); // Check every 10 seconds (temporary for testing)
 
         return () => {
-            console.log('[RecordSyncContext] Clearing interval and marking as unmounted');
-            isMountedRef.current = false;
+            console.log('[RecordSyncContext] Clearing interval (effect cleanup)');
             clearInterval(interval);
         }
     }, [db, isOnline, appState, authenticated]);
