@@ -25,7 +25,8 @@
       "package": "com.intricatech.pregcheck",
       "permissions": [
         "com.google.android.gms.permission.AD_ID"
-      ]
+      ],
+      "versionCode": 24
     },
     "web": {
       "bundler": "metro",

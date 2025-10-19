@@ -148,6 +148,7 @@ const PasswordReset = () => {
                     }}
                     value={email}
                     placeholder="Email address"
+                    placeholderTextColor={colors.fgColor}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     testID="email-input"
@@ -172,6 +173,7 @@ const PasswordReset = () => {
                     }}
                     value={code}
                     placeholder="Verification code"
+                    placeholderTextColor={colors.fgColor}
                     testID="code-input"
                 />
                 {errors.code ? (
@@ -194,6 +196,7 @@ const PasswordReset = () => {
                     }}
                     value={newPassword1}
                     placeholder="New Password"
+                    placeholderTextColor={colors.fgColor}
                     secureTextEntry={!showPassword1}
                     testID="new-password1-input"
                 />
@@ -233,6 +236,7 @@ const PasswordReset = () => {
                     }}
                     value={newPassword2}
                     placeholder="Confirm New Password"
+                    placeholderTextColor={colors.fgColor}
                     secureTextEntry={!showPassword2}
                     testID="new-password2-input"
                 />
