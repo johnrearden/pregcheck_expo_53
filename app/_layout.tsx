@@ -59,7 +59,6 @@ function AuthenticatedApp() {
       databaseName="pregcheck_db"
       onInit={migrateDBifNeeded}
       onError={handleDatabaseError}
-      options={{ useNewConnection: true }}
     >
       <ThemeProvider>
         <ErrorProvider>

@@ -1,15 +1,27 @@
 # Known Issues
 
-## In-App Upgrade Database Connection Issue
+## In-App Upgrade Database Connection Issue (Internal Testers Only)
 
-**Status**: Fixed with `useNewConnection: true`
-**Affected**: Google Play in-app upgrades (when app remains open during update)
-**Severity**: Medium - Self-resolves on app restart
-**Fix**: Re-enabled `useNewConnection: true` in SQLiteProvider
+**Status**: Known Limitation - No Fix Available
+**Affected**: Internal testers upgrading while app is open
+**Severity**: Low - Only affects internal testing; self-resolves on restart; normal Play Store upgrades work fine
+**Workaround**: Force-close and reopen app after in-app upgrade
 
 ### Description
 
-When Google Play performs an in-app upgrade (e.g., from production to internal testing track) while the app is running, the database connection from the old version remains in memory. When the app resumes with the new code, it attempts to use the stale connection, causing a `NullPointerException`.
+When Google Play performs an in-app upgrade (e.g., from production to internal testing track) **while the app is running**, the database connection from the old version remains in memory. When the app resumes with the new code, it attempts to use the stale connection, causing a `NullPointerException`.
+
+**IMPORTANT**: This ONLY affects the specific scenario where:
+- User is an internal tester
+- Old version is already running
+- Google Play interrupts with "new version available" dialog
+- User accepts and app upgrades in-place without closing
+
+**Normal upgrade paths work perfectly:**
+- ✅ Users upgrading through Play Store (app not running)
+- ✅ Fresh installs
+- ✅ Background updates when app is closed
+- ✅ Manual updates with app closed
 
 ### Error Signature
 
@@ -21,11 +33,17 @@ code: 'ERR_UNEXPECTED'
 
 ### When It Occurs
 
-- Specifically during Google Play in-app upgrades when:
+- **Only during Google Play in-app upgrades** when:
   1. Old version of app is open
   2. Google Play interrupts with update notification
   3. User accepts update and app installs in place
   4. App resumes with new code but old database connection
+
+- **Does NOT occur during:**
+  - Normal Play Store upgrades (app closed)
+  - Fresh installations
+  - Background auto-updates
+  - Production user upgrades
 
 ### Impact
 
@@ -33,19 +51,29 @@ code: 'ERR_UNEXPECTED'
 - ✅ Issue self-resolves when user force-closes and reopens app
 - ✅ Database migration works correctly on clean app start
 - ✅ No data loss occurs
+- ✅ **Very rare in practice** - most users upgrade with app closed
 
-### Fix
+### Attempted Fixes
 
-Added `options={{ useNewConnection: true }}` to SQLiteProvider in `app/_layout.tsx`. This forces expo-sqlite to create a fresh database connection instead of reusing a cached connection from the previous version, preventing stale connection issues during in-app upgrades.
+- ❌ `useNewConnection: true` - Did not resolve the issue
+- ❌ Connection health checks - Native connection invalidated at lower level
 
-### Testing
+### Current Approach
 
-To reproduce and verify fix:
-1. Install old production version via `adb install`
-2. Open app (becomes internal tester)
-3. Accept Google Play update notification
-4. Verify app works correctly after in-app upgrade
-5. No force-close should be needed
+**Accept as known limitation for internal testing only.** The issue:
+- Only affects internal testers during a very specific upgrade scenario
+- Self-resolves with a simple app restart
+- Does not affect production users
+- Does not cause data loss
+- Database migrations work correctly in all normal upgrade scenarios
+
+### Recommendation for Internal Testers
+
+When upgrading to a new internal testing version:
+1. If database errors occur after in-app upgrade
+2. Force-close the app
+3. Reopen the app
+4. Everything will work normally
 
 ---
 
