@@ -29,7 +29,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="myapp"/>
-        <data android:scheme="exp+pregcheckexpo53"/>
+        <data android:scheme="exp+pregcheck"/>
       </intent-filter>
     </activity>
   </application>
