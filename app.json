@@ -4,7 +4,7 @@
     "slug": "pregcheck",
     "version": "1.2.11",
     "orientation": "portrait",
-    "icon": "./assets/images/android_app_icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
