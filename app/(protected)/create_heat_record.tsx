@@ -318,47 +318,35 @@ const CreateHeatRecord = () => {
                                 testID="heat-tag-input"
                             />
 
-                            {/* Heat date selection buttons */}
+                            {/* Heat Today button */}
                             <View style={{
                                 width: "100%",
-                                flexDirection: "row",
                                 alignItems: "center",
-                                justifyContent: "flex-start",
+                                justifyContent: "center",
                                 marginTop: 20,
                             }}>
-                                <Text
-                                    style={[
-                                        baseStyle.label,
-                                        {
-                                            width: "40%",
-                                            textAlign: "right",
-                                            paddingRight: 10,
-                                            fontSize: 18,
-                                            fontWeight: 'bold',
-                                        }
-                                    ]}
-                                    numberOfLines={1}
-                                >
-                                    Heat Date
-                                </Text>
-                                <View style={{
-                                    flexDirection: "row",
-                                    gap: 10,
-                                }}>
-                                    <Button
-                                        title="Heat Today"
-                                        onPress={handleHeatToday}
-                                        style={{ paddingHorizontal: 15 }}
-                                        testID="heat-today-button"
-                                    />
-                                    <Button
-                                        title="Enter Date"
-                                        onPress={() => setShowDatePicker(true)}
-                                        outline
-                                        style={{ paddingHorizontal: 15 }}
-                                        testID="enter-date-button"
-                                    />
-                                </View>
+                                <Button
+                                    title="Heat Today"
+                                    onPress={handleHeatToday}
+                                    style={{ width: "60%" }}
+                                    testID="heat-today-button"
+                                />
+                            </View>
+
+                            {/* Enter Date button */}
+                            <View style={{
+                                width: "100%",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                marginTop: 15,
+                            }}>
+                                <Button
+                                    title="Enter Date"
+                                    onPress={() => setShowDatePicker(true)}
+                                    outline
+                                    style={{ width: "60%" }}
+                                    testID="enter-date-button"
+                                />
                             </View>
 
                             {/* Date picker (Android modal / iOS inline) */}
