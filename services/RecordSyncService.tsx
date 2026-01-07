@@ -1,8 +1,10 @@
 import { RecordType } from "@/contexts/RecordContext";
 import { WeightRecordType } from "@/contexts/WeightRecordContext";
+import { HeatRecordType } from "@/contexts/HeatRecordContext";
 import { bulkUpdateRecords, getUnpostedRecords,
     getUnpostedWeightRecords, bulkUpdateWeightRecords,
-    updateLocalSession, updateLocalWeightSession } from "@/utilities/DatabaseUtils"
+    getUnpostedHeatRecords, bulkUpdateHeatRecords,
+    updateLocalSession, updateLocalWeightSession, updateLocalHeatSession } from "@/utilities/DatabaseUtils"
 import { SQLiteDatabase } from "expo-sqlite";
 import { api } from "./ApiService";
 
@@ -18,15 +20,22 @@ const RecordSyncService = {
         return pendingWeightRecords;
     },
 
+    async checkForPendingHeatRecords(db: SQLiteDatabase): Promise<any[]> {
+        const pendingHeatRecords: HeatRecordType[] = await getUnpostedHeatRecords(db);
+        return pendingHeatRecords;
+    },
+
     async trySync(
         db: SQLiteDatabase,
         records: RecordType[],
         weightRecords: WeightRecordType[],
+        heatRecords: HeatRecordType[],
         showToast: (message: string, type: 'success' | 'error' | 'warning') => void
     ) {
-        console.log('[RecordSyncService] trySync started with', records.length, 'preg records and', weightRecords.length, 'weight records');
+        console.log('[RecordSyncService] trySync started with', records.length, 'preg records,', weightRecords.length, 'weight records, and', heatRecords.length, 'heat records');
         let pregSessionsSynced = 0;
         let weightSessionsSynced = 0;
+        let heatSessionsSynced = 0;
 
         // Handle pregnancy scan records
         if (records.length > 0) {
@@ -208,14 +217,88 @@ const RecordSyncService = {
             }
         }
 
+        // Handle heat records
+        if (heatRecords.length > 0) {
+
+            // Organize the heat records in an object keyed by their session IDs
+            const heatRecordsBySessionId: { [key: string]: HeatRecordType[] } = {};
+            heatRecords.forEach((record) => {
+                if (record.device_session_pk && !heatRecordsBySessionId[record.device_session_pk]) {
+                    heatRecordsBySessionId[record.device_session_pk] = [];
+                }
+                if (record.device_session_pk) {
+                    heatRecordsBySessionId[record.device_session_pk].push(record);
+                }
+            });
+
+            for (const sessionId in heatRecordsBySessionId) {
+                const unpostedHeatRecords = heatRecordsBySessionId[sessionId];
+                const postData = {
+                    unposted_records: unpostedHeatRecords,
+                    posted_record_ids: [],
+                    device_session_pk: sessionId,
+                }
+
+                console.log('[RecordSyncService] Syncing heat session', sessionId, 'with', unpostedHeatRecords.length, 'records');
+
+                const response = await api.post(
+                    'exam_session/create_heat_session/',
+                    postData
+                );
+
+                if (response.success && response.data) {
+                    type ServerResponse = {
+                        session: {
+                            id: number;
+                        },
+                        unposted_record_ids: Record<string, number>,
+                        owner: number,
+                    }
+                    const data = response.data as ServerResponse;
+                    const server_session_pk = data.session.id;
+                    console.log("[RecordSyncService] Heat session synced successfully, server ID:", server_session_pk);
+
+                    // Update the records with their server ids
+                    unpostedHeatRecords.forEach((record) => {
+                        if (record.device_pk && data.unposted_record_ids[record.device_pk]) {
+                            record.server_pk = data.unposted_record_ids[record.device_pk];
+                            record.owner = data.owner;
+                        };
+                    });
+
+                    // Update the records in the database
+                    await bulkUpdateHeatRecords(
+                        db,
+                        unpostedHeatRecords,
+                        server_session_pk
+                    );
+                    console.log("[RecordSyncService] Local database updated for heat session");
+
+                    // Update the local heat session with server ID and record count
+                    await updateLocalHeatSession(db, server_session_pk, parseInt(sessionId), unpostedHeatRecords.length);
+                    console.log("[RecordSyncService] Local heat session updated with server ID and record count");
+
+                    heatSessionsSynced++;
+
+                    // Note: No email summary for heat records per user requirements
+                } else if (response.offline) {
+                    console.error('[RecordSyncService] Offline - cannot sync heat session', sessionId);
+                    throw new Error('You are offline. Please check your internet connection.');
+                } else if (response.error) {
+                    console.error('[RecordSyncService] Error syncing heat session', sessionId, ':', response.error);
+                    throw new Error(`Failed to sync heat records: ${response.error}`);
+                }
+            }
+        }
+
         // Show success message if any sessions were synced
-        const totalSynced = pregSessionsSynced + weightSessionsSynced;
+        const totalSynced = pregSessionsSynced + weightSessionsSynced + heatSessionsSynced;
         if (totalSynced > 0) {
-            console.log('[RecordSyncService] Sync complete:', pregSessionsSynced, 'pregnancy sessions,', weightSessionsSynced, 'weight sessions');
+            console.log('[RecordSyncService] Sync complete:', pregSessionsSynced, 'pregnancy sessions,', weightSessionsSynced, 'weight sessions,', heatSessionsSynced, 'heat sessions');
             showToast(`Successfully synced ${totalSynced} session${totalSynced > 1 ? 's' : ''}!`, 'success');
         }
     }
 
 };
 
-export const { checkForPendingRecords, checkForPendingWeightRecords, trySync } = RecordSyncService;
+export const { checkForPendingRecords, checkForPendingWeightRecords, checkForPendingHeatRecords, trySync } = RecordSyncService;

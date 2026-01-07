@@ -1,5 +1,6 @@
 import { RecordType } from "@/contexts/RecordContext";
 import { WeightRecordType } from "@/contexts/WeightRecordContext";
+import { HeatRecordType } from "@/contexts/HeatRecordContext";
 
 export function parseDBRecord(obj: any): RecordType {
     return {
@@ -37,5 +38,20 @@ export function parseDBWeightRecord(obj: any): WeightRecordType {
         device_session_pk: obj.device_session_id,
         device_pk: obj.id,
         date: obj.date,
+    };
+}
+
+export function parseDBHeatRecord(obj: any): HeatRecordType {
+    return {
+        id: obj.id,
+        owner: obj.owner,
+        tag: obj.tag,
+        heat_date: obj.heat_date,
+        next_heat_date: obj.next_heat_date,
+        note: obj.note,
+        created_at: obj.created_at,
+        server_pk: obj.server_id,
+        device_session_pk: obj.device_session_id,
+        device_pk: obj.id,
     };
 }

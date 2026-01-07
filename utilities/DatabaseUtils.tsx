@@ -1,7 +1,8 @@
 import { RecordType } from '@/contexts/RecordContext';
 import { WeightRecordType } from '@/contexts/WeightRecordContext';
+import { HeatRecordType } from '@/contexts/HeatRecordContext';
 import * as SQLite from 'expo-sqlite';
-import { parseDBRecord, parseDBWeightRecord } from './helpers';
+import { parseDBRecord, parseDBWeightRecord, parseDBHeatRecord } from './helpers';
 
 // DROP TABLE IF EXISTS records;
 // DROP TABLE IF EXISTS sessions;
@@ -86,6 +87,28 @@ export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
         );
 
         CREATE TABLE IF NOT EXISTS weight_session (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            vet_name TEXT,
+            server_session_id INTEGER,
+            record_count INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS heat_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner INTEGER,
+            tag TEXT,
+            heat_date TEXT,
+            next_heat_date TEXT,
+            note TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            server_session_id INTEGER,
+            server_id INTEGER,
+            device_session_id INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS heat_session (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             vet_name TEXT,
@@ -833,5 +856,259 @@ export const removeEmptyWeightSession = async (db: SQLite.SQLiteDatabase, sessio
     } catch (error) {
         console.error('Error fetching unposted records:', error);
         return []; // Return empty array on error
+    }
+}
+
+// =====================
+// Heat Record Functions
+// =====================
+
+export const addLocalHeatRecord = async (
+    db: SQLite.SQLiteDatabase,
+    record: HeatRecordType
+) => {
+    try {
+        const result = await db.runAsync(
+            `INSERT INTO heat_records (
+                owner,
+                tag,
+                heat_date,
+                next_heat_date,
+                note,
+                created_at,
+                updated_at,
+                server_session_id,
+                server_id,
+                device_session_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                record.owner ?? 0,
+                record.tag ?? '',
+                record.heat_date ?? '',
+                record.next_heat_date ?? '',
+                record.note ?? '',
+                new Date().toISOString(),
+                new Date().toISOString(),
+                0,
+                0,
+                record.device_session_pk ?? 0,
+            ]
+        );
+        return result.lastInsertRowId;
+    } catch (error) {
+        console.error('Error adding local heat record:', error);
+    }
+};
+
+export const updateLocalHeatRecord = async (db: SQLite.SQLiteDatabase, record: HeatRecordType) => {
+    try {
+        const result = await db.runAsync(
+            `UPDATE heat_records SET
+                owner = ?,
+                tag = ?,
+                heat_date = ?,
+                next_heat_date = ?,
+                note = ?,
+                updated_at = ?,
+                server_session_id = ?,
+                server_id = ?,
+                device_session_id = ?
+            WHERE id = ?`,
+            [
+                record.owner ?? 0,
+                record.tag ?? '',
+                record.heat_date ?? '',
+                record.next_heat_date ?? '',
+                record.note ?? '',
+                new Date().toISOString(),
+                null,
+                record.server_pk ?? 0,
+                record.device_session_pk ?? 0,
+                record.device_pk ?? 0,
+            ],
+        );
+        return result.changes;
+    } catch (error) {
+        console.error('Error updating local heat record:', error);
+    }
+}
+
+export const createLocalHeatSession = async (db: SQLite.SQLiteDatabase) => {
+    try {
+        const result = await db.runAsync(
+            `INSERT INTO heat_session (
+                date,
+                vet_name,
+                server_session_id) VALUES (?,?,?)`,
+            [
+                new Date().toISOString(),
+                '',
+                null,
+            ],
+        );
+        return result.lastInsertRowId;
+    } catch (error) {
+        console.error('Error adding local heat session:', error);
+    }
+}
+
+export const updateLocalHeatSession = async (
+    db: SQLite.SQLiteDatabase,
+    serverSessionId: number,
+    deviceSessionId: number,
+    recordCount: number
+) => {
+    try {
+        const result = await db.runAsync(
+            `UPDATE heat_session SET
+                date = ?,
+                vet_name = ?,
+                server_session_id = ?,
+                record_count = ?
+            WHERE id = ?`,
+            [
+                new Date().toISOString(),
+                '',
+                serverSessionId,
+                recordCount,
+                deviceSessionId,
+            ],
+        );
+        return result.changes;
+    } catch (error) {
+        console.error('Error updating local heat session:', error);
+    }
+}
+
+export const bulkUpdateHeatRecords = async (
+    db: SQLite.SQLiteDatabase,
+    records: HeatRecordType[],
+    serverSessionId: number,
+) => {
+    console.log('[DatabaseUtils] bulkUpdateHeatRecords starting transaction for', records.length, 'records');
+
+    // Validate database connection exists
+    if (!db) {
+        console.error('[DatabaseUtils] Database connection is null or undefined!');
+        throw new Error('Database connection is not available');
+    }
+
+    // Check if database is accessible before starting transaction
+    const isAccessible = await isDatabaseAccessible(db);
+    if (!isAccessible) {
+        console.error('[DatabaseUtils] Database is not accessible, aborting heat records transaction');
+        throw new Error('Database is not accessible');
+    }
+
+    try {
+        // Use expo-sqlite's recommended transaction API
+        await db.withExclusiveTransactionAsync(async (txn) => {
+            console.log('[DatabaseUtils] Heat records transaction started (withExclusiveTransactionAsync)');
+
+            // Loop through each record and update it using the transaction object
+            for (const record of records) {
+                console.log('[DatabaseUtils] Updating heat record device_pk:', record.device_pk, 'with server_pk:', record.server_pk);
+                await txn.runAsync(
+                    `UPDATE heat_records SET
+                        server_session_id = ?,
+                        server_id = ?,
+                        owner = ?
+                    WHERE id = ?`,
+                    [
+                        serverSessionId,
+                        record.server_pk ?? 0,
+                        record.owner ?? 0,
+                        record.device_pk ?? 0,
+                    ],
+                );
+                console.log('[DatabaseUtils] Heat record', record.device_pk, 'updated successfully');
+            }
+
+            console.log('[DatabaseUtils] All heat record updates completed, transaction will auto-commit');
+        });
+
+        console.log('[DatabaseUtils] Heat records transaction committed successfully');
+    } catch (error) {
+        console.error('[DatabaseUtils] Error in bulkUpdateHeatRecords (transaction auto-rolled back):', error);
+        throw error;
+    }
+}
+
+export const getRecordsForHeatSession = async (
+    db: SQLite.SQLiteDatabase,
+    sessionId: number
+) => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records WHERE device_session_id = ?`,
+            [sessionId]
+        );
+
+        // Convert the result to an array of HeatRecordType
+        const records: HeatRecordType[] = result.map((record: any) => parseDBHeatRecord(record));
+        return records;
+    } catch (error) {
+        console.error('Error fetching heat records for session:', error);
+        return [];
+    }
+}
+
+export const getUnpostedHeatRecords = async (db: SQLite.SQLiteDatabase) => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records WHERE server_id = 0`
+        );
+
+        // Convert the result to an array of HeatRecordType
+        const records: HeatRecordType[] = result.map((record: any) => parseDBHeatRecord(record));
+        return records;
+    } catch (error) {
+        console.error('Error fetching unposted heat records:', error);
+        return [];
+    }
+}
+
+export const getHeatRecordsByTag = async (
+    db: SQLite.SQLiteDatabase,
+    tag: string
+) => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records WHERE tag = ?`,
+            [tag]
+        );
+
+        return result;
+    } catch (error) {
+        console.error('Error fetching heat records by tag:', error);
+        return [];
+    }
+}
+
+export const getAllHeatSessions = async (
+    db: SQLite.SQLiteDatabase
+) => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_session`
+        );
+
+        return result;
+    } catch (error) {
+        console.error('Error fetching all heat sessions:', error);
+        return [];
+    }
+}
+
+export const removeEmptyHeatSession = async (db: SQLite.SQLiteDatabase, sessionID: number) => {
+    try {
+        const result = await db.runAsync(
+            `DELETE FROM heat_session WHERE id = ?`,
+            [sessionID]
+        );
+        return result.changes;
+    } catch (error) {
+        console.error('Error removing empty heat session:', error);
+        return [];
     }
 }

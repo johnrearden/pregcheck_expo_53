@@ -5,6 +5,7 @@ import Button from "@/components/Button";
 import { useRouter } from "expo-router";
 import { usePersistRecord, useRecord } from "@/contexts/RecordContext";
 import { useWeightRecordMethod } from "@/contexts/WeightRecordContext";
+import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
 import { useRecordSync } from "@/contexts/RecordSyncContext";
 import { Entypo } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from "react";
@@ -23,8 +24,9 @@ export default function Index() {
 
     const { resetState, isSessionRunning } = usePersistRecord();
     const { createWeightSession, resetWeightState, isWeightSessionRunning } = useWeightRecordMethod();
+    const { createHeatSession, resetHeatState, isHeatSessionRunning } = useHeatRecordMethod();
     const record = useRecord();
-    const { hasUnpostedRecords, hasUnpostedWeightRecords, isOnline, syncRecords } = useRecordSync();
+    const { hasUnpostedRecords, hasUnpostedWeightRecords, hasUnpostedHeatRecords, isOnline, syncRecords } = useRecordSync();
     const [syncing, setSyncing] = useState(false);
 
     // Create an animated value for the opacity
@@ -58,11 +60,13 @@ export default function Index() {
     }, [isSessionRunning]);
 
     // Determine which type of session is running (if any)
-    const hasActiveSession = isSessionRunning || isWeightSessionRunning;
-    const sessionType = isSessionRunning ? 'Pregnancy Scan' : 'Weight Scan';
+    const hasActiveSession = isSessionRunning || isWeightSessionRunning || isHeatSessionRunning;
+    const sessionType = isSessionRunning ? 'Pregnancy Scan'
+        : isWeightSessionRunning ? 'Weight Scan'
+        : 'Heat Check';
 
     // Determine the sync icon color
-    const hasPendingSync = hasUnpostedRecords || hasUnpostedWeightRecords;
+    const hasPendingSync = hasUnpostedRecords || hasUnpostedWeightRecords || hasUnpostedHeatRecords;
     const syncIconColor = !hasPendingSync ? '#888888' : colors.warnColor;
 
     const handlePregScanPressed = () => {
@@ -88,6 +92,14 @@ export default function Index() {
             createWeightSession();
         }
         router.push("/calf_weight_record");
+    }
+
+    const handleHeatCheckPressed = () => {
+        if (!isHeatSessionRunning) {
+            resetHeatState();
+            createHeatSession();
+        }
+        router.push("/create_heat_record");
     }
 
     const handleSyncPress = async () => {
@@ -242,7 +254,7 @@ export default function Index() {
                     title={isSessionRunning ? "Resume Preg Scan" : "Pregnancy Scan"}
                     style={{ marginTop: 30, marginBottom: 15, width: "70%" }}
                     outline={false}
-                    disabled={isWeightSessionRunning}
+                    disabled={isWeightSessionRunning || isHeatSessionRunning}
                     testID="preg-scan-button"
                 ></Button>
                 <Button
@@ -250,8 +262,16 @@ export default function Index() {
                     title={isWeightSessionRunning ? "Resume weight session" : "Weight Check"}
                     style={{ marginVertical: 10, width: "70%" }}
                     outline
-                    disabled={isSessionRunning}
+                    disabled={isSessionRunning || isHeatSessionRunning}
                     testID="weight-check-button"
+                ></Button>
+                <Button
+                    onPress={handleHeatCheckPressed}
+                    title={isHeatSessionRunning ? "Resume Heat Session" : "Heat Check"}
+                    style={{ marginVertical: 10, width: "70%" }}
+                    outline
+                    disabled={isSessionRunning || isWeightSessionRunning}
+                    testID="heat-check-button"
                 ></Button>
 
                 <Button

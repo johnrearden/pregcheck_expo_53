@@ -1,4 +1,5 @@
 import { ErrorProvider } from '@/contexts/ErrorContext';
+import { HeatRecordProvider } from '@/contexts/HeatRecordContext';
 import { RecordProvider } from '@/contexts/RecordContext';
 import { RecordSyncProvider } from '@/contexts/RecordSyncContext';
 import { StatsProvider } from '@/contexts/StatsContext';
@@ -65,7 +66,8 @@ function AuthenticatedApp() {
           <StatsProvider>
             <RecordProvider>
               <WeightRecordProvider>
-                <RecordSyncProvider>
+                <HeatRecordProvider>
+                  <RecordSyncProvider>
                   <StatusBar style="light" backgroundColor={colors.brgtColor} />
                   <SafeAreaView style={{
                     flex: 1,
@@ -80,7 +82,8 @@ function AuthenticatedApp() {
                     </Stack>
 
                   </SafeAreaView>
-                </RecordSyncProvider>
+                  </RecordSyncProvider>
+                </HeatRecordProvider>
               </WeightRecordProvider>
             </RecordProvider>
           </StatsProvider>

@@ -4,14 +4,16 @@ import { AppState, AppStateStatus } from 'react-native';
 //@ts-ignore
 import { useAuth } from '@/auth/AuthContext';
 import { useToast } from '@/hooks/useToast';
-import { checkForPendingRecords, checkForPendingWeightRecords, trySync } from '@/services/RecordSyncService';
+import { checkForPendingRecords, checkForPendingWeightRecords, checkForPendingHeatRecords, trySync } from '@/services/RecordSyncService';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { RecordType, usePersistRecord } from './RecordContext';
 import { WeightRecordType, useWeightRecordMethod } from './WeightRecordContext';
+import { HeatRecordType, useHeatRecordMethod } from './HeatRecordContext';
 
 interface RecordSyncContextType {
     hasUnpostedRecords: boolean;
     hasUnpostedWeightRecords: boolean;
+    hasUnpostedHeatRecords: boolean;
     isOnline: boolean;
     syncRecords: () => Promise<void>;
 }
@@ -19,6 +21,7 @@ interface RecordSyncContextType {
 const RecordSyncContext = createContext<RecordSyncContextType>({
     hasUnpostedRecords: false,
     hasUnpostedWeightRecords: false,
+    hasUnpostedHeatRecords: false,
     isOnline: false,
     syncRecords: async () => { },
 });
@@ -37,6 +40,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     const [hasUnpostedRecords, setHasUnpostedRecords] = useState(false);
     const [hasUnpostedWeightRecords, setHasUnpostedWeightRecords] = useState(false);
+    const [hasUnpostedHeatRecords, setHasUnpostedHeatRecords] = useState(false);
     const [isOnline, setIsOnline] = useState(false);
     const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
     const showToast = useToast();
@@ -46,6 +50,9 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const { isWeightSessionRunning, isWeightFinishing } = useWeightRecordMethod();
     const weightSessionRunningRef = useRef(isWeightSessionRunning);
     const weightFinishingRef = useRef(isWeightFinishing);
+    const { isHeatSessionRunning, isHeatFinishing } = useHeatRecordMethod();
+    const heatSessionRunningRef = useRef(isHeatSessionRunning);
+    const heatFinishingRef = useRef(isHeatFinishing);
 
     // Track if component is mounted to prevent database access after unmount
     const isMountedRef = useRef(true);
@@ -75,6 +82,14 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     useEffect(() => {
         weightFinishingRef.current = isWeightFinishing;
     }, [isWeightFinishing]);
+
+    useEffect(() => {
+        heatSessionRunningRef.current = isHeatSessionRunning;
+    }, [isHeatSessionRunning]);
+
+    useEffect(() => {
+        heatFinishingRef.current = isHeatFinishing;
+    }, [isHeatFinishing]);
 
     // Add AppState listener to track when app is active/background
     useEffect(() => {
@@ -172,6 +187,45 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
     }, [db, appState, isWeightSessionRunning, authenticated])
 
+    const checkUnpostedHeatRecords = useCallback( async () => {
+        // CRITICAL: Do not access database if component is unmounted
+        if (!isMountedRef.current) {
+            console.log('[RecordSyncContext] Component unmounted, skipping heat records check');
+            return;
+        }
+
+        // CRITICAL: Only check for unposted records if user is authenticated
+        if (!authenticated) {
+            console.log('[RecordSyncContext] User not authenticated, skipping heat records check');
+            return;
+        }
+
+        if (!db) {
+            console.warn('[RecordSyncContext] Database is not available yet!');
+            return;
+        }
+
+        // CRITICAL: Only access database when app is active
+        if (appState !== 'active') {
+            console.log('[RecordSyncContext] Skipping heat DB access - app state is:', appState);
+            return;
+        }
+
+        console.log('[RecordSyncContext] Checking for unposted heat records, AppState:', appState);
+
+        try {
+            const unpostedHeatRecords: HeatRecordType[] = await checkForPendingHeatRecords(db);
+            if (isMountedRef.current) {
+                setHasUnpostedHeatRecords(unpostedHeatRecords.length > 0);
+                console.log('[RecordSyncContext] Unposted heat records:', unpostedHeatRecords.length);
+            }
+            return unpostedHeatRecords;
+        } catch (error) {
+            console.error('[RecordSyncContext] CRITICAL ERROR checking for unposted heat records:', error);
+            console.error('[RecordSyncContext] AppState during error:', appState);
+        }
+    }, [db, appState, isHeatSessionRunning, authenticated])
+
     // Sync records with the server
     const syncRecords = async () => {
         if (!isOnline) return;
@@ -179,14 +233,19 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Check for unposted records again before syncing
         const records = await checkUnpostedRecords();
         const weightRecords = await checkUnpostedWeightRecords();
-        if (records?.length === 0 && weightRecords?.length === 0) {
+        const heatRecords = await checkUnpostedHeatRecords();
+        if (records?.length === 0 && weightRecords?.length === 0 && heatRecords?.length === 0) {
             console.log('No unposted records to sync.');
             return;
         } else {
             if (records && records?.length > 0) {
                 console.log('Unposted records found:', records);
-            } else if (weightRecords && weightRecords?.length > 0) {
+            }
+            if (weightRecords && weightRecords?.length > 0) {
                 console.log('Unposted weight records found:', weightRecords);
+            }
+            if (heatRecords && heatRecords?.length > 0) {
+                console.log('Unposted heat records found:', heatRecords);
             }
         }
         try {
@@ -194,9 +253,11 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 db,
                 records || [],
                 weightRecords || [],
+                heatRecords || [],
                 showToast);
             setHasUnpostedRecords(false);
             setHasUnpostedWeightRecords(false);
+            setHasUnpostedHeatRecords(false);
         } catch (error) {
             console.error('Error syncing records:', error);
         }
@@ -220,6 +281,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (appState === 'active' && db && authenticated) {
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
+            checkUnpostedHeatRecords();
         } else {
             console.log('[RecordSyncContext] Skipping initial check - appState:', appState, 'db:', !!db, 'authenticated:', authenticated);
         }
@@ -239,7 +301,8 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 return;
             }
 
-            if (sessionRunningRef.current || weightSessionRunningRef.current || finishingRef.current || weightFinishingRef.current) {
+            if (sessionRunningRef.current || weightSessionRunningRef.current || heatSessionRunningRef.current ||
+                finishingRef.current || weightFinishingRef.current || heatFinishingRef.current) {
                 console.log('[RecordSyncContext] Session is running or finishing, skipping sync check');
                 return;
             }
@@ -247,6 +310,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             console.log('[RecordSyncContext] Executing periodic sync check...');
             checkUnpostedRecords();
             checkUnpostedWeightRecords();
+            checkUnpostedHeatRecords();
         }, 60 * 1000); // Check every 60 seconds
 
         return () => {
@@ -262,6 +326,7 @@ export const RecordSyncProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             value={{
                 hasUnpostedRecords,
                 hasUnpostedWeightRecords,
+                hasUnpostedHeatRecords,
                 isOnline,
                 syncRecords,
             }}
