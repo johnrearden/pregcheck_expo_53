@@ -7,7 +7,7 @@ import { usePersistRecord, useRecord } from "@/contexts/RecordContext";
 import { useWeightRecordMethod } from "@/contexts/WeightRecordContext";
 import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
 import { useRecordSync } from "@/contexts/RecordSyncContext";
-import { Entypo } from '@expo/vector-icons';
+import { Entypo, MaterialIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { AnimalType } from "@/constants/Types";
@@ -17,7 +17,7 @@ import { AnimalType } from "@/constants/Types";
 // It displays the main functionalities of the app, such as starting a pregnancy scan or a weight check.
 export default function Index() {
 
-    const { colors } = useTheme();
+    const { colors, baseStyle } = useTheme();
     const { width } = Dimensions.get("window");
     const router = useRouter();
     const db = useSQLiteContext();
@@ -274,25 +274,45 @@ export default function Index() {
                     testID="heat-check-button"
                 ></Button>
 
-                <Button
-                    onPress={() => {
-                        router.push("/search_type_choice");
-                    }}
-                    title="Search"
-                    style={{ marginVertical: 10, width: "40%" }}
-                    outline
-                    testID="search-button"
-                ></Button>
+                <View style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 20,
+                    marginVertical: 10,
+                }}>
+                    <View style={baseStyle.shadowContainer}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                router.push("/search_type_choice");
+                            }}
+                            style={[baseStyle.button_outline, { padding: 10 }]}
+                            testID="search-button"
+                        >
+                            <MaterialIcons
+                                name="search"
+                                size={28}
+                                color={colors.fgColor}
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-                <Button
-                    onPress={() => {
-                        router.push("/settings");
-                    }}
-                    title="Settings"
-                    style={{ marginVertical: 10, width: "40%" }}
-                    outline
-                    testID="settings-button"
-                ></Button>
+                    <View style={baseStyle.shadowContainer}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                router.push("/settings");
+                            }}
+                            style={[baseStyle.button_outline, { padding: 10 }]}
+                            testID="settings-button"
+                        >
+                            <MaterialIcons
+                                name="settings"
+                                size={28}
+                                color={colors.fgColor}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
 
             </View>
 
