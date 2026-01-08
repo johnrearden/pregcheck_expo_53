@@ -1,24 +1,31 @@
-import {
-    View, TouchableWithoutFeedback, Keyboard, TouchableOpacity,
-    Text, ScrollView, Platform, KeyboardAvoidingView, Animated,
-    TextInput
-} from 'react-native';
-import React, { useEffect, useState, useRef } from 'react';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import Navbar from "@/components/Navbar";
+import CowHeadshotIcon from '@/assets/icons/CowHeadshotIcon';
 import Button from "@/components/Button";
 import ModalConfirm from '@/components/ModalConfirm';
+import Navbar from "@/components/Navbar";
 import TagInput from '@/components/TagInput';
-import { useTheme } from '@/hooks/useTheme';
 import { useHeatRecord, useHeatRecordMethod } from '@/contexts/HeatRecordContext';
 import { useRecordSync } from '@/contexts/RecordSyncContext';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTheme } from '@/hooks/useTheme';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import CowHeadshotIcon from '@/assets/icons/CowHeadshotIcon';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Animated,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
 
 // Default estrus cycle length for cattle (days)
-const ESTRUS_CYCLE_DAYS = 21;
+const ESTRUS_CYCLE_DAYS = 20;
 
 // Component for creating and editing heat records
 const CreateHeatRecord = () => {
@@ -318,35 +325,47 @@ const CreateHeatRecord = () => {
                                 testID="heat-tag-input"
                             />
 
-                            {/* Heat Today button */}
+                            {/* Heat date buttons */}
                             <View style={{
                                 width: "100%",
-                                alignItems: "center",
-                                justifyContent: "center",
+                                flexDirection: "row",
+                                alignItems: "flex-start",
+                                justifyContent: "flex-start",
                                 marginTop: 20,
                             }}>
-                                <Button
-                                    title="Heat Today"
-                                    onPress={handleHeatToday}
-                                    style={{ width: "60%" }}
-                                    testID="heat-today-button"
-                                />
-                            </View>
-
-                            {/* Enter Date button */}
-                            <View style={{
-                                width: "100%",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                marginTop: 15,
-                            }}>
-                                <Button
-                                    title="Enter Date"
-                                    onPress={() => setShowDatePicker(true)}
-                                    outline
-                                    style={{ width: "60%" }}
-                                    testID="enter-date-button"
-                                />
+                                <Text
+                                    style={[
+                                        baseStyle.label,
+                                        {
+                                            width: "40%",
+                                            textAlign: "right",
+                                            paddingRight: 10,
+                                            paddingTop: 12,
+                                            fontSize: 18,
+                                            fontWeight: 'bold',
+                                        }
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    Heat Date
+                                </Text>
+                                <View style={{
+                                    width: "55%",
+                                    flexDirection: "column",
+                                    gap: 10,
+                                }}>
+                                    <Button
+                                        title="Heat Today"
+                                        onPress={handleHeatToday}
+                                        testID="heat-today-button"
+                                    />
+                                    <Button
+                                        title="Enter Date"
+                                        onPress={() => setShowDatePicker(true)}
+                                        outline
+                                        testID="enter-date-button"
+                                    />
+                                </View>
                             </View>
 
                             {/* Date picker (Android modal / iOS inline) */}
@@ -397,7 +416,9 @@ const CreateHeatRecord = () => {
                                         {
                                             width: "40%",
                                             textAlign: "right",
+                                            padding: 0,
                                             paddingRight: 10,
+                                            marginBottom: 0,
                                             fontSize: 18,
                                             fontWeight: 'bold',
                                         }
@@ -416,18 +437,39 @@ const CreateHeatRecord = () => {
                             </View>
 
                             {/* Next heat date display */}
-                            <Text
-                                style={{
-                                    color: colors.fgColor,
-                                    fontSize: 20,
-                                    fontWeight: "bold",
-                                    marginTop: 20,
-                                    textAlign: 'center',
-                                    width: '100%',
-                                }}
-                            >
-                                Next heat expected: {formatDisplayDate(calculateNextHeatDate(recordData.heat_date))}
-                            </Text>
+                            <View style={{
+                                width: "100%",
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "flex-start",
+                                marginTop: 20,
+                            }}>
+                                <Text
+                                    style={[
+                                        baseStyle.label,
+                                        {
+                                            width: "40%",
+                                            textAlign: "right",
+                                            padding: 0,
+                                            paddingRight: 10,
+                                            marginBottom: 0,
+
+                                            fontSize: 18,
+                                            fontWeight: 'bold',
+                                        }
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    Next Heat
+                                </Text>
+                                <Text style={{
+                                    color: colors.brgtColor,
+                                    fontSize: 18,
+                                    fontWeight: 'bold',
+                                }}>
+                                    {formatDisplayDate(calculateNextHeatDate(recordData.heat_date))}
+                                </Text>
+                            </View>
 
                             {/* Add Note Text Field */}
                             <View style={{
