@@ -275,7 +275,27 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 await updateLocalHeatSession(db, server_session_pk, sessionID, heatRecordList.length);
                 console.log('[HeatRecordContext] Local database updated successfully');
 
-                // Note: No email summary for heat records per user requirements
+                // Request email summary
+                try {
+                    console.log('[HeatRecordContext] Requesting heat summary email for session:', server_session_pk);
+                    const summaryResponse = await api.post(
+                        'exam_session/send_heat_summary/',
+                        { session_id: server_session_pk }
+                    );
+
+                    if (!summaryResponse.success) {
+                        if (summaryResponse.offline) {
+                            console.log('[HeatRecordContext] Offline - email summary skipped');
+                        } else if (summaryResponse.error) {
+                            console.error('[HeatRecordContext] Failed to send heat summary email:', summaryResponse.error);
+                        }
+                    } else {
+                        console.log('[HeatRecordContext] Heat summary email requested successfully');
+                    }
+                } catch (emailError) {
+                    console.error('[HeatRecordContext] Non-critical error sending heat email:', emailError);
+                }
+
                 showToast('Heat records synced successfully.', 'success');
             } else if (response.error) {
                 // Handle offline mode or other errors
