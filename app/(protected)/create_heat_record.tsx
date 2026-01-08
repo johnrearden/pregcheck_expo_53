@@ -351,20 +351,32 @@ const CreateHeatRecord = () => {
                                 </Text>
                                 <View style={{
                                     width: "55%",
-                                    flexDirection: "column",
-                                    gap: 10,
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 15,
                                 }}>
                                     <Button
-                                        title="Heat Today"
+                                        title="Today"
                                         onPress={handleHeatToday}
                                         testID="heat-today-button"
                                     />
-                                    <Button
-                                        title="Enter Date"
+                                    <TouchableOpacity
                                         onPress={() => setShowDatePicker(true)}
-                                        outline
+                                        style={{
+                                            backgroundColor: colors.bgLightColor,
+                                            borderWidth: 1,
+                                            borderColor: colors.brgtColor,
+                                            borderRadius: 10,
+                                            padding: 10,
+                                        }}
                                         testID="enter-date-button"
-                                    />
+                                    >
+                                        <MaterialIcons
+                                            name="calendar-today"
+                                            size={28}
+                                            color={colors.brgtColor}
+                                        />
+                                    </TouchableOpacity>
                                 </View>
                             </View>
 

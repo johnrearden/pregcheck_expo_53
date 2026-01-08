@@ -280,7 +280,23 @@ const RecordSyncService = {
 
                     heatSessionsSynced++;
 
-                    // Note: No email summary for heat records per user requirements
+                    // Request an email summary of the session (non-critical)
+                    try {
+                        const summaryResponse = await api.post(
+                            'exam_session/send_heat_summary/',
+                            { session_id: server_session_pk }
+                        );
+
+                        if (!summaryResponse.success) {
+                            if (summaryResponse.offline) {
+                                console.log('[RecordSyncService] Offline for heat email summary');
+                            } else if (summaryResponse.error) {
+                                console.error("[RecordSyncService] Failed to send heat summary email:", summaryResponse.error);
+                            }
+                        }
+                    } catch (emailError) {
+                        console.error("[RecordSyncService] Non-critical error sending heat email:", emailError);
+                    }
                 } else if (response.offline) {
                     console.error('[RecordSyncService] Offline - cannot sync heat session', sessionId);
                     throw new Error('You are offline. Please check your internet connection.');
