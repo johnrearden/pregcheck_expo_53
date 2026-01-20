@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from "expo-sqlite";
-import { View, Text, TouchableOpacity, Alert, Switch, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Switch, Platform, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Navbar from "@/components/Navbar";
 import Button from "@/components/Button";
@@ -113,12 +113,16 @@ const Settings = () => {
         >
             <Navbar title="Settings" subTitle="Manage your account" />
 
-            <Button
-                title="Home"
-                onPress={() => router.push('/')}
-                style={{ marginTop: 50, width: '70%' }}
-                testID="settings-home-button"
-            />
+            <ScrollView
+                style={{ flex: 1, width: '100%' }}
+                contentContainerStyle={{ alignItems: 'center', paddingBottom: 40 }}
+            >
+                <Button
+                    title="Home"
+                    onPress={() => router.push('/')}
+                    style={{ marginTop: 50, width: '70%' }}
+                    testID="settings-home-button"
+                />
 
             {/* Notification Settings Section */}
             <View style={{
@@ -276,7 +280,7 @@ const Settings = () => {
                     Delete Account
                 </Text>
             </TouchableOpacity>
-            
+            </ScrollView>
 
             {/* Confirmation modal for deleting user account */}
             <DeleteUserConfirmModal
