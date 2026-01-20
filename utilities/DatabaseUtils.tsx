@@ -1112,3 +1112,33 @@ export const removeEmptyHeatSession = async (db: SQLite.SQLiteDatabase, sessionI
         return [];
     }
 }
+
+/**
+ * Get heat records where next_heat_date falls within a date range.
+ * Used for scheduling heat notifications.
+ * @param db SQLite database instance
+ * @param startDate Start date in YYYY-MM-DD format
+ * @param endDate End date in YYYY-MM-DD format
+ * @returns Array of HeatRecordType matching the date range
+ */
+export const getHeatRecordsForDateRange = async (
+    db: SQLite.SQLiteDatabase,
+    startDate: string,
+    endDate: string
+): Promise<HeatRecordType[]> => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records
+             WHERE date(next_heat_date) >= date(?)
+             AND date(next_heat_date) <= date(?)`,
+            [startDate, endDate]
+        );
+
+        // Convert the result to an array of HeatRecordType
+        const records: HeatRecordType[] = result.map((record: any) => parseDBHeatRecord(record));
+        return records;
+    } catch (error) {
+        console.error('Error fetching heat records for date range:', error);
+        return [];
+    }
+}

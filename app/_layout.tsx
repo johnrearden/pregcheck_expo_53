@@ -1,5 +1,7 @@
 import { ErrorProvider } from '@/contexts/ErrorContext';
 import { HeatRecordProvider } from '@/contexts/HeatRecordContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
+import { NotificationSettingsProvider } from '@/contexts/NotificationSettingsContext';
 import { RecordProvider } from '@/contexts/RecordContext';
 import { RecordSyncProvider } from '@/contexts/RecordSyncContext';
 import { StatsProvider } from '@/contexts/StatsContext';
@@ -56,40 +58,44 @@ function AuthenticatedApp() {
   console.log('[_layout] Rendering SQLiteProvider');
 
   return (
-    <SQLiteProvider
-      databaseName="pregcheck_db"
-      onInit={migrateDBifNeeded}
-      onError={handleDatabaseError}
-    >
-      <ThemeProvider>
-        <ErrorProvider>
-          <StatsProvider>
-            <RecordProvider>
-              <WeightRecordProvider>
-                <HeatRecordProvider>
-                  <RecordSyncProvider>
-                  <StatusBar style="light" backgroundColor={colors.brgtColor} />
-                  <SafeAreaView style={{
-                    flex: 1,
-                    backgroundColor: colors.brgtColor,
-                  }}>
-                    <Stack screenOptions={{
-                      headerShown: false,
-                      gestureEnabled: true,
-                      gestureDirection: 'horizontal'
-                    }}>
-                      {/* Stack will automatically render the appropriate screen based on routes */}
-                    </Stack>
+    <NotificationSettingsProvider>
+      <SQLiteProvider
+        databaseName="pregcheck_db"
+        onInit={migrateDBifNeeded}
+        onError={handleDatabaseError}
+      >
+        <NotificationProvider>
+          <ThemeProvider>
+            <ErrorProvider>
+              <StatsProvider>
+                <RecordProvider>
+                  <WeightRecordProvider>
+                    <HeatRecordProvider>
+                      <RecordSyncProvider>
+                        <StatusBar style="light" backgroundColor={colors.brgtColor} />
+                        <SafeAreaView style={{
+                          flex: 1,
+                          backgroundColor: colors.brgtColor,
+                        }}>
+                          <Stack screenOptions={{
+                            headerShown: false,
+                            gestureEnabled: true,
+                            gestureDirection: 'horizontal'
+                          }}>
+                            {/* Stack will automatically render the appropriate screen based on routes */}
+                          </Stack>
 
-                  </SafeAreaView>
-                  </RecordSyncProvider>
-                </HeatRecordProvider>
-              </WeightRecordProvider>
-            </RecordProvider>
-          </StatsProvider>
-        </ErrorProvider>
-      </ThemeProvider>
-    </SQLiteProvider>
+                        </SafeAreaView>
+                      </RecordSyncProvider>
+                    </HeatRecordProvider>
+                  </WeightRecordProvider>
+                </RecordProvider>
+              </StatsProvider>
+            </ErrorProvider>
+          </ThemeProvider>
+        </NotificationProvider>
+      </SQLiteProvider>
+    </NotificationSettingsProvider>
   );
 }
 
