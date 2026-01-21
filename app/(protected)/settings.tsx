@@ -14,7 +14,7 @@ import { api } from '@/services/ApiService';
 
 import { truncateAllTables } from "@/utilities/DatabaseUtils";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PREG_SESSION_KEY, WEIGHT_SESSION_KEY } from "@/constants/asyncStorageKeys";
+import { PREG_SESSION_KEY, WEIGHT_SESSION_KEY, HEAT_SESSION_KEY } from "@/constants/asyncStorageKeys";
 import { getAllScheduledHeatNotifications } from "@/services/HeatNotificationService";
 import * as Notifications from 'expo-notifications';
 
@@ -124,6 +124,7 @@ const Settings = () => {
                             // Also clear AsyncStorage
                             await AsyncStorage.removeItem(PREG_SESSION_KEY);
                             await AsyncStorage.removeItem(WEIGHT_SESSION_KEY);
+                            await AsyncStorage.removeItem(HEAT_SESSION_KEY);
                             Alert.alert("Database Reset", "All data has been cleared.");
                         } catch (error) {
                             console.error("Error resetting database:", error);

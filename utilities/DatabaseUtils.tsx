@@ -759,6 +759,8 @@ export const truncateAllTables = async (db: SQLite.SQLiteDatabase) => {
         await db.execAsync('DELETE FROM sessions');
         await db.execAsync('DELETE FROM weight_records');
         await db.execAsync('DELETE FROM weight_session');
+        await db.execAsync('DELETE FROM heat_records');
+        await db.execAsync('DELETE FROM heat_session');
         console.log('All tables truncated');
     } catch (error) {
         console.error('Error truncating tables:', error);
