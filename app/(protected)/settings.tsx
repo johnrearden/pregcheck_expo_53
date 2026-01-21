@@ -96,7 +96,9 @@ const Settings = () => {
     const getDateFromIdentifier = (identifier: string): string => {
         const dateStr = identifier.replace('heat-', '');
         const [year, month, day] = dateStr.split('-');
-        return `${month}/${day}/${year}`;
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthName = monthNames[parseInt(month, 10) - 1];
+        return `${day} ${monthName} ${year}`;
     };
 
     // Format scheduled time from trigger
