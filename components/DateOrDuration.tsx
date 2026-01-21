@@ -1,9 +1,11 @@
 import { View, Text, Platform, TouchableOpacity } from "react-native";
 import NumberInput from "@/components/NumberInput";
+import Button from "@/components/Button";
 // @ts-ignore
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
+import { MaterialIcons } from "@expo/vector-icons";
 
 
 export interface DateOrDurationProps {
@@ -104,40 +106,49 @@ const DateOrDuration = (props: DateOrDurationProps) => {
                 >
                     {datePickerLabel || 'Date'}
                 </Text>
-                <View style={{ width: "55%" }}>
-                    {Platform.OS === 'android' && (
-                        <TouchableOpacity
-                            testID="android-date-picker-button"
-                            disabled={disabled}
-                            onPress={() => setShowDatePicker(true)}
-                        >
-                            <Text
-                                style={{
-                                    fontFamily: 'Nunito',
-                                    fontSize: 18,
-                                    color: colors.fgColor,
-                                    borderRadius: 10,
-                                    backgroundColor: colors.bgColor,
-                                    borderColor: colors.thrdColor,
-                                    borderWidth: 1,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 5,
-                                }}
-                                
-                            >
-                                {date.toLocaleDateString()}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                <View style={{ width: "55%", flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Text
+                        style={{
+                            fontFamily: 'Nunito',
+                            fontSize: 18,
+                            color: colors.fgColor,
+                            borderRadius: 10,
+                            backgroundColor: colors.bgColor,
+                            borderColor: colors.thrdColor,
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                        }}
+                    >
+                        {date.toLocaleDateString()}
+                    </Text>
+                    <TouchableOpacity
+                        testID="date-picker-button"
+                        disabled={disabled}
+                        onPress={() => setShowDatePicker(true)}
+                        style={{
+                            backgroundColor: colors.bgLightColor,
+                            borderWidth: 1,
+                            borderColor: colors.brgtColor,
+                            borderRadius: 10,
+                            padding: 10,
+                        }}
+                    >
+                        <MaterialIcons
+                            name="calendar-today"
+                            size={28}
+                            color={colors.brgtColor}
+                        />
+                    </TouchableOpacity>
 
-                    {(showDatePicker || Platform.OS === 'ios') && (
+                    {showDatePicker && Platform.OS === 'android' && (
                         <DateTimePicker
                             value={date}
                             mode="date"
                             display="default"
                             onChange={(event: DateTimePickerEvent, date: Date | undefined) => {
                                 handleDateChange(event, date);
-                                setShowDatePicker(Platform.OS === 'ios');
+                                setShowDatePicker(false);
                             }}
                             maximumDate={new Date()}
                             disabled={disabled}
@@ -146,6 +157,37 @@ const DateOrDuration = (props: DateOrDurationProps) => {
                     )}
                 </View>
             </View>
+
+            {/* iOS Calendar Modal */}
+            {showDatePicker && Platform.OS === 'ios' && (
+                <View style={{
+                    width: "90%",
+                    alignSelf: "center",
+                    marginTop: 10,
+                    backgroundColor: '#333',
+                    borderRadius: 12,
+                    padding: 16,
+                }}>
+                    <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="inline"
+                        onChange={(event: DateTimePickerEvent, selectedDate: Date | undefined) => {
+                            handleDateChange(event, selectedDate);
+                        }}
+                        maximumDate={new Date()}
+                        disabled={disabled}
+                        accentColor="#4dd9d0"
+                        themeVariant="dark"
+                        testID="date-picker"
+                    />
+                    <Button
+                        title="Done"
+                        onPress={() => setShowDatePicker(false)}
+                        style={{ marginTop: 10 }}
+                    />
+                </View>
+            )}
 
             <View
                 style={{
