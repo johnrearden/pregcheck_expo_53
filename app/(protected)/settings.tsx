@@ -15,6 +15,8 @@ import { api } from '@/services/ApiService';
 import { truncateAllTables } from "@/utilities/DatabaseUtils";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PREG_SESSION_KEY, WEIGHT_SESSION_KEY } from "@/constants/asyncStorageKeys";
+import { getAllScheduledHeatNotifications } from "@/services/HeatNotificationService";
+import * as Notifications from 'expo-notifications';
 
 
 // This component provides settings options for the user, including logout, reset database, and delete account.
@@ -28,6 +30,8 @@ const Settings = () => {
 
     const [confirmModalVisible, setConfirmModalVisible] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [scheduledNotifications, setScheduledNotifications] = useState<Notifications.NotificationRequest[]>([]);
+    const [showDebugInfo, setShowDebugInfo] = useState(false);
 
     // Notification settings
     const { settings, setHeatNotificationsEnabled, setNotificationTime } = useNotificationSettings();
@@ -58,6 +62,36 @@ const Settings = () => {
         const displayHour = hour % 12 || 12;
         const displayMinute = minute.toString().padStart(2, '0');
         return `${displayHour}:${displayMinute} ${period}`;
+    };
+
+    // Load scheduled notifications for debug display
+    const loadScheduledNotifications = async () => {
+        const notifications = await getAllScheduledHeatNotifications();
+        setScheduledNotifications(notifications);
+        setShowDebugInfo(true);
+    };
+
+    // Extract date from notification identifier (format: heat-YYYY-MM-DD)
+    const getDateFromIdentifier = (identifier: string): string => {
+        const dateStr = identifier.replace('heat-', '');
+        const [year, month, day] = dateStr.split('-');
+        return `${month}/${day}/${year}`;
+    };
+
+    // Format scheduled time from trigger
+    const getScheduledTime = (trigger: Notifications.NotificationTrigger | null): string => {
+        if (!trigger) return 'Unknown';
+        // Date triggers store the timestamp in 'value' property when retrieved
+        if ('value' in trigger && typeof trigger.value === 'number') {
+            const date = new Date(trigger.value);
+            return formatTime(date.getHours(), date.getMinutes());
+        }
+        // Fallback for 'date' property (input format)
+        if ('date' in trigger && trigger.date) {
+            const date = new Date(trigger.date as number | Date);
+            return formatTime(date.getHours(), date.getMinutes());
+        }
+        return 'Unknown';
     };
 
     const onLogoutClicked = () => {
@@ -229,6 +263,91 @@ const Settings = () => {
                             >
                                 <Text style={{ color: colors.brgtColor, fontSize: 16 }}>Done</Text>
                             </TouchableOpacity>
+                        )}
+
+                        {/* Debug: Show Scheduled Notifications */}
+                        <TouchableOpacity
+                            onPress={loadScheduledNotifications}
+                            style={{
+                                marginTop: 16,
+                                backgroundColor: colors.bgColor,
+                                padding: 12,
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: colors.thrdColor,
+                            }}
+                            testID="show-scheduled-notifications-button"
+                        >
+                            <Text style={{
+                                fontSize: 14,
+                                color: colors.thrdColor,
+                                textAlign: 'center',
+                            }}>
+                                Show Scheduled Notifications
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showDebugInfo && (
+                            <View style={{ marginTop: 12 }}>
+                                <Text style={{
+                                    fontSize: 14,
+                                    color: colors.fgColor,
+                                    fontWeight: 'bold',
+                                    marginBottom: 8,
+                                }}>
+                                    Scheduled Heat Notifications ({scheduledNotifications.length})
+                                </Text>
+                                {scheduledNotifications.length === 0 ? (
+                                    <Text style={{
+                                        fontSize: 12,
+                                        color: colors.thrdColor,
+                                        fontStyle: 'italic',
+                                    }}>
+                                        No notifications scheduled
+                                    </Text>
+                                ) : (
+                                    scheduledNotifications.map((notification, index) => (
+                                        <View
+                                            key={notification.identifier}
+                                            style={{
+                                                backgroundColor: colors.bgColor,
+                                                padding: 8,
+                                                borderRadius: 6,
+                                                marginBottom: 6,
+                                                borderWidth: 1,
+                                                borderColor: colors.thrdColor,
+                                            }}
+                                        >
+                                            <Text style={{
+                                                fontSize: 13,
+                                                color: colors.brgtColor,
+                                                fontWeight: '600',
+                                            }}>
+                                                {getDateFromIdentifier(notification.identifier)} at {getScheduledTime(notification.trigger)}
+                                            </Text>
+                                            <Text style={{
+                                                fontSize: 11,
+                                                color: colors.thrdColor,
+                                                marginTop: 4,
+                                            }}
+                                            numberOfLines={2}
+                                            >
+                                                {notification.content.body}
+                                            </Text>
+                                        </View>
+                                    ))
+                                )}
+                                <TouchableOpacity
+                                    onPress={() => setShowDebugInfo(false)}
+                                    style={{
+                                        marginTop: 8,
+                                        padding: 6,
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <Text style={{ color: colors.thrdColor, fontSize: 12 }}>Hide</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </View>
                 )}

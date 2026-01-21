@@ -1,16 +1,16 @@
-import { Text, View, Image, Dimensions, Animated, TouchableOpacity, Alert } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
-import { useTheme } from "@/hooks/useTheme";
 import Button from "@/components/Button";
-import { useRouter } from "expo-router";
-import { usePersistRecord, useRecord } from "@/contexts/RecordContext";
-import { useWeightRecordMethod } from "@/contexts/WeightRecordContext";
-import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
-import { useRecordSync } from "@/contexts/RecordSyncContext";
-import { Entypo, MaterialIcons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from "react";
-import { useSQLiteContext } from "expo-sqlite";
 import { AnimalType } from "@/constants/Types";
+import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
+import { usePersistRecord, useRecord } from "@/contexts/RecordContext";
+import { useRecordSync } from "@/contexts/RecordSyncContext";
+import { useWeightRecordMethod } from "@/contexts/WeightRecordContext";
+import { useTheme } from "@/hooks/useTheme";
+import { Entypo, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
+import { useSQLiteContext } from "expo-sqlite";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Animated, Dimensions, Image, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 
 
 // The Index component serves as the main entry point for the app's home screen.
@@ -63,7 +63,7 @@ export default function Index() {
     const hasActiveSession = isSessionRunning || isWeightSessionRunning || isHeatSessionRunning;
     const sessionType = isSessionRunning ? 'Pregnancy Scan'
         : isWeightSessionRunning ? 'Weight Scan'
-        : 'Heat Check';
+            : 'Heat Check';
 
     // Determine the sync icon color
     const hasPendingSync = hasUnpostedRecords || hasUnpostedWeightRecords || hasUnpostedHeatRecords;
@@ -248,31 +248,31 @@ export default function Index() {
                     </TouchableOpacity>
                 )}
 
-
+                <Button
+                    onPress={handleHeatCheckPressed}
+                    title={isHeatSessionRunning ? "Resume Heat Session" : "Heat Date"}
+                    style={{ marginTop: 30, width: "70%" }}
+                    outline={false}
+                    disabled={isSessionRunning || isWeightSessionRunning}
+                    testID="heat-check-button"
+                ></Button>
                 <Button
                     onPress={handlePregScanPressed}
                     title={isSessionRunning ? "Resume Preg Scan" : "Pregnancy Scan"}
-                    style={{ marginTop: 30, marginBottom: 15, width: "70%" }}
-                    outline={false}
+                    style={{ marginTop: 15, width: "70%" }}
+                    outline
                     disabled={isWeightSessionRunning || isHeatSessionRunning}
                     testID="preg-scan-button"
                 ></Button>
                 <Button
                     onPress={handleWeightScanPressed}
                     title={isWeightSessionRunning ? "Resume weight session" : "Weight Check"}
-                    style={{ marginVertical: 10, width: "70%" }}
+                    style={{ marginVertical: 15, width: "70%" }}
                     outline
                     disabled={isSessionRunning || isHeatSessionRunning}
                     testID="weight-check-button"
                 ></Button>
-                <Button
-                    onPress={handleHeatCheckPressed}
-                    title={isHeatSessionRunning ? "Resume Heat Session" : "Heat Check"}
-                    style={{ marginVertical: 10, width: "70%" }}
-                    outline
-                    disabled={isSessionRunning || isWeightSessionRunning}
-                    testID="heat-check-button"
-                ></Button>
+
 
                 <View style={{
                     flexDirection: "row",
@@ -291,6 +291,22 @@ export default function Index() {
                         >
                             <MaterialIcons
                                 name="search"
+                                size={28}
+                                color={colors.fgColor}
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={baseStyle.shadowContainer}>
+                        <TouchableOpacity
+                            onPress={() => {
+                                router.push("/heat_calendar");
+                            }}
+                            style={[baseStyle.button_outline, { padding: 10 }]}
+                            testID="heat-calendar-button"
+                        >
+                            <MaterialIcons
+                                name="calendar-today"
                                 size={28}
                                 color={colors.fgColor}
                             />

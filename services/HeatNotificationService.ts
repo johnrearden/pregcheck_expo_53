@@ -246,3 +246,22 @@ export const getScheduledHeatNotificationCount = async (): Promise<number> => {
         return 0;
     }
 };
+
+/**
+ * Get all scheduled heat notifications with full details
+ * @returns Array of scheduled heat notification objects
+ */
+export const getAllScheduledHeatNotifications = async (): Promise<Notifications.NotificationRequest[]> => {
+    try {
+        const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+        const heatNotifications = scheduledNotifications.filter(n =>
+            n.identifier.startsWith(HEAT_NOTIFICATION_PREFIX)
+        );
+        // Sort by identifier (which contains the date)
+        heatNotifications.sort((a, b) => a.identifier.localeCompare(b.identifier));
+        return heatNotifications;
+    } catch (error) {
+        console.error('[HeatNotificationService] Error getting scheduled notifications:', error);
+        return [];
+    }
+};
