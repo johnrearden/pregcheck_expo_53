@@ -759,6 +759,8 @@ export const truncateAllTables = async (db: SQLite.SQLiteDatabase) => {
         await db.execAsync('DELETE FROM sessions');
         await db.execAsync('DELETE FROM weight_records');
         await db.execAsync('DELETE FROM weight_session');
+        await db.execAsync('DELETE FROM heat_records');
+        await db.execAsync('DELETE FROM heat_session');
         console.log('All tables truncated');
     } catch (error) {
         console.error('Error truncating tables:', error);
@@ -1139,6 +1141,53 @@ export const getHeatRecordsForDateRange = async (
         return records;
     } catch (error) {
         console.error('Error fetching heat records for date range:', error);
+        return [];
+    }
+}
+
+/**
+ * Get heat records where heat_date is on or after the specified date.
+ * Used for multi-notification scheduling where we calculate notification dates from heat_date.
+ * @param db SQLite database instance
+ * @param fromDate Start date in YYYY-MM-DD format
+ * @returns Array of HeatRecordType where heat_date >= fromDate
+ */
+export const getHeatRecordsFromDate = async (
+    db: SQLite.SQLiteDatabase,
+    fromDate: string
+): Promise<HeatRecordType[]> => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records WHERE date(heat_date) >= date(?)`,
+            [fromDate]
+        );
+
+        const records: HeatRecordType[] = result.map((record: any) => parseDBHeatRecord(record));
+        return records;
+    } catch (error) {
+        console.error('Error fetching heat records from date:', error);
+        return [];
+    }
+}
+
+/**
+ * Get all heat records from the database.
+ * Used for multi-notification scheduling where we need all records to calculate notification dates.
+ * @param db SQLite database instance
+ * @returns Array of all HeatRecordType records
+ */
+export const getAllHeatRecords = async (
+    db: SQLite.SQLiteDatabase
+): Promise<HeatRecordType[]> => {
+    try {
+        const result = await db.getAllAsync(
+            `SELECT * FROM heat_records`
+        );
+
+        const records: HeatRecordType[] = result.map((record: any) => parseDBHeatRecord(record));
+        return records;
+    } catch (error) {
+        console.error('Error fetching all heat records:', error);
         return [];
     }
 }
