@@ -304,7 +304,6 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     console.error('[HeatRecordContext] Non-critical error sending heat email:', emailError);
                 }
 
-                showToast('Heat records synced successfully.', 'success');
             } else if (response.error) {
                 // Handle offline mode or other errors
                 if (response.offline) {
