@@ -46,11 +46,19 @@ const DateOrDuration = (props: DateOrDurationProps) => {
     }
 
     const handleDurationChange = (value: string) => {
-        let actualDays = parseInt(value) || 0;
-        if (durationUnit === 'weeks') {
-            actualDays *= 7;
-        } else if (durationUnit === 'months') {
-            actualDays *= 30;
+        let actualDays: number;
+
+        if (durationUnit === 'days') {
+            // Days must be integers
+            actualDays = parseInt(value) || 0;
+        } else {
+            // Weeks and months allow decimals, round to nearest day
+            const inputValue = parseFloat(value) || 0;
+            if (durationUnit === 'weeks') {
+                actualDays = Math.round(inputValue * 7);
+            } else {
+                actualDays = Math.round(inputValue * 30);
+            }
         }
         setDate(new Date(Date.now() - actualDays * 24 * 60 * 60 * 1000));
         onDurationChange(actualDays);
@@ -178,6 +186,7 @@ const DateOrDuration = (props: DateOrDurationProps) => {
                             onChange={handleDurationChange}
                             style={{ width: "100%", paddingRight: 80 }} // Added padding for validation message
                             testID="duration-input"
+                            allowDecimal={durationUnit !== 'days'}  // Enable decimals for weeks/months
                         />
                         
                         {/* Validation message inside the input */}
