@@ -10,6 +10,8 @@ export interface NotificationTime {
 export interface NotificationSettings {
     heatNotificationsEnabled: boolean;
     notificationTime: NotificationTime;
+    heatNotificationCount: number;    // Number of notifications per heat record (default 3)
+    heatNotificationInterval: number; // Days between notifications (default 20)
 }
 
 export interface NotificationSettingsContextType {
@@ -17,11 +19,15 @@ export interface NotificationSettingsContextType {
     isLoading: boolean;
     setHeatNotificationsEnabled: (enabled: boolean) => Promise<void>;
     setNotificationTime: (time: NotificationTime) => Promise<void>;
+    setHeatNotificationCount: (count: number) => Promise<void>;
+    setHeatNotificationInterval: (interval: number) => Promise<void>;
 }
 
 const DEFAULT_SETTINGS: NotificationSettings = {
     heatNotificationsEnabled: false,
     notificationTime: { hour: 7, minute: 0 },
+    heatNotificationCount: 3,
+    heatNotificationInterval: 20,
 };
 
 const NotificationSettingsContext = createContext<NotificationSettingsContextType>({
@@ -29,6 +35,8 @@ const NotificationSettingsContext = createContext<NotificationSettingsContextTyp
     isLoading: true,
     setHeatNotificationsEnabled: async () => {},
     setNotificationTime: async () => {},
+    setHeatNotificationCount: async () => {},
+    setHeatNotificationInterval: async () => {},
 });
 
 export const useNotificationSettings = () => useContext(NotificationSettingsContext);
@@ -46,9 +54,14 @@ export const NotificationSettingsProvider: React.FC<{ children: React.ReactNode 
             try {
                 const storedSettings = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_KEY);
                 if (storedSettings) {
-                    const parsed = JSON.parse(storedSettings) as NotificationSettings;
-                    console.log('[NotificationSettingsContext] Loaded settings:', parsed);
-                    setSettings(parsed);
+                    const parsed = JSON.parse(storedSettings);
+                    // Merge with defaults to handle migration (new fields get default values)
+                    const mergedSettings: NotificationSettings = {
+                        ...DEFAULT_SETTINGS,
+                        ...parsed,
+                    };
+                    console.log('[NotificationSettingsContext] Loaded settings:', mergedSettings);
+                    setSettings(mergedSettings);
                 } else {
                     console.log('[NotificationSettingsContext] No stored settings, using defaults');
                 }
@@ -88,6 +101,20 @@ export const NotificationSettingsProvider: React.FC<{ children: React.ReactNode 
         await saveSettings(newSettings);
     }, [settings, saveSettings]);
 
+    // Update heat notification count setting
+    const setHeatNotificationCount = useCallback(async (count: number) => {
+        console.log('[NotificationSettingsContext] Setting heat notification count:', count);
+        const newSettings = { ...settings, heatNotificationCount: count };
+        await saveSettings(newSettings);
+    }, [settings, saveSettings]);
+
+    // Update heat notification interval setting
+    const setHeatNotificationInterval = useCallback(async (interval: number) => {
+        console.log('[NotificationSettingsContext] Setting heat notification interval:', interval);
+        const newSettings = { ...settings, heatNotificationInterval: interval };
+        await saveSettings(newSettings);
+    }, [settings, saveSettings]);
+
     return (
         <NotificationSettingsContext.Provider
             value={{
@@ -95,6 +122,8 @@ export const NotificationSettingsProvider: React.FC<{ children: React.ReactNode 
                 isLoading,
                 setHeatNotificationsEnabled,
                 setNotificationTime,
+                setHeatNotificationCount,
+                setHeatNotificationInterval,
             }}
         >
             {children}

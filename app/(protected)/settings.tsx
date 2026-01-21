@@ -34,7 +34,16 @@ const Settings = () => {
     const [showDebugInfo, setShowDebugInfo] = useState(false);
 
     // Notification settings
-    const { settings, setHeatNotificationsEnabled, setNotificationTime } = useNotificationSettings();
+    const {
+        settings,
+        setHeatNotificationsEnabled,
+        setNotificationTime,
+        setHeatNotificationCount,
+        setHeatNotificationInterval,
+    } = useNotificationSettings();
+
+    // Available options for notification count
+    const notificationCountOptions = [1, 2, 3, 4, 5];
 
     // Handle toggle of heat notifications
     const handleNotificationToggle = async (enabled: boolean) => {
@@ -62,6 +71,18 @@ const Settings = () => {
         const displayHour = hour % 12 || 12;
         const displayMinute = minute.toString().padStart(2, '0');
         return `${displayHour}:${displayMinute} ${period}`;
+    };
+
+    // Handle notification count change
+    const handleCountChange = async (count: number) => {
+        await setHeatNotificationCount(count);
+    };
+
+    // Handle interval change
+    const handleIntervalChange = async (days: number) => {
+        if (days >= 1 && days <= 60) {
+            await setHeatNotificationInterval(days);
+        }
     };
 
     // Load scheduled notifications for debug display
@@ -265,6 +286,146 @@ const Settings = () => {
                                 <Text style={{ color: colors.brgtColor, fontSize: 16 }}>Done</Text>
                             </TouchableOpacity>
                         )}
+
+                        {/* Notification Count Selector */}
+                        <View style={{ marginTop: 16 }}>
+                            <Text style={{
+                                fontSize: 16,
+                                color: colors.fgColor,
+                                marginBottom: 8,
+                            }}>
+                                Reminders Per Animal
+                            </Text>
+                            <Text style={{
+                                fontSize: 12,
+                                color: colors.thrdColor,
+                                marginBottom: 8,
+                            }}>
+                                How many times to notify for each heat record
+                            </Text>
+                            <View style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                            }}>
+                                {notificationCountOptions.map((count) => (
+                                    <TouchableOpacity
+                                        key={count}
+                                        onPress={() => handleCountChange(count)}
+                                        style={{
+                                            flex: 1,
+                                            marginHorizontal: 4,
+                                            padding: 12,
+                                            borderRadius: 8,
+                                            backgroundColor: settings.heatNotificationCount === count
+                                                ? colors.brgtColor
+                                                : colors.bgColor,
+                                            borderWidth: 1,
+                                            borderColor: settings.heatNotificationCount === count
+                                                ? colors.brgtColor
+                                                : colors.thrdColor,
+                                            alignItems: 'center',
+                                        }}
+                                        testID={`notification-count-${count}`}
+                                    >
+                                        <Text style={{
+                                            fontSize: 16,
+                                            fontWeight: '600',
+                                            color: settings.heatNotificationCount === count
+                                                ? colors.bgColor
+                                                : colors.fgColor,
+                                        }}>
+                                            {count}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Notification Interval Selector */}
+                        <View style={{ marginTop: 16 }}>
+                            <Text style={{
+                                fontSize: 16,
+                                color: colors.fgColor,
+                                marginBottom: 8,
+                            }}>
+                                Days Between Reminders
+                            </Text>
+                            <Text style={{
+                                fontSize: 12,
+                                color: colors.thrdColor,
+                                marginBottom: 8,
+                            }}>
+                                Interval in days between each notification
+                            </Text>
+                            <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                <TouchableOpacity
+                                    onPress={() => handleIntervalChange(settings.heatNotificationInterval - 1)}
+                                    style={{
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: 22,
+                                        backgroundColor: colors.bgColor,
+                                        borderWidth: 1,
+                                        borderColor: colors.thrdColor,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                    disabled={settings.heatNotificationInterval <= 1}
+                                    testID="interval-decrease"
+                                >
+                                    <Text style={{
+                                        fontSize: 24,
+                                        color: settings.heatNotificationInterval <= 1 ? colors.thrdColor : colors.fgColor,
+                                    }}>
+                                        -
+                                    </Text>
+                                </TouchableOpacity>
+                                <View style={{
+                                    paddingHorizontal: 24,
+                                    alignItems: 'center',
+                                }}>
+                                    <Text style={{
+                                        fontSize: 24,
+                                        fontWeight: '600',
+                                        color: colors.brgtColor,
+                                    }}>
+                                        {settings.heatNotificationInterval}
+                                    </Text>
+                                    <Text style={{
+                                        fontSize: 12,
+                                        color: colors.thrdColor,
+                                    }}>
+                                        days
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={() => handleIntervalChange(settings.heatNotificationInterval + 1)}
+                                    style={{
+                                        width: 44,
+                                        height: 44,
+                                        borderRadius: 22,
+                                        backgroundColor: colors.bgColor,
+                                        borderWidth: 1,
+                                        borderColor: colors.thrdColor,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                    disabled={settings.heatNotificationInterval >= 60}
+                                    testID="interval-increase"
+                                >
+                                    <Text style={{
+                                        fontSize: 24,
+                                        color: settings.heatNotificationInterval >= 60 ? colors.thrdColor : colors.fgColor,
+                                    }}>
+                                        +
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
                         {/* Debug: Show Scheduled Notifications */}
                         <TouchableOpacity
