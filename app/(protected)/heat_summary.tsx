@@ -1,77 +1,39 @@
-import { View, Text, ScrollView, Platform, StatusBar } from "react-native";
-import { useTheme } from "@/hooks/useTheme";
-import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
-import Navbar from "@/components/Navbar";
-import Button from "@/components/Button";
-import { useRouter } from "expo-router";
-import { useRef, useEffect, useState } from "react";
-import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
 import CowHeadshotIcon from "@/assets/icons/CowHeadshotIcon";
+import Button from "@/components/Button";
+import Navbar from "@/components/Navbar";
+import { useHeatRecordMethod } from "@/contexts/HeatRecordContext";
+import { useTheme } from "@/hooks/useTheme";
+import { useRouter } from "expo-router";
+import { useRef } from "react";
+import { Platform, ScrollView, Text, View } from "react-native";
+import { BannerAd, BannerAdSize, useForeground } from 'react-native-google-mobile-ads';
 
-// Admob ids per platform
-const ANDROID_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-4741649534091227/6567715645";
-const IOS_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-4741649534091227/7562660165";
+// Admob Banner Ad ids per platform
+// TODO: Replace with actual banner ad unit IDs from AdMob console
+const ANDROID_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/3985014750";
+const IOS_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/7924259762";
 
 const adUnitId = Platform.select({
-    ios: IOS_INTERSTITIAL_AD_UNIT_ID,
-    android: ANDROID_INTERSTITIAL_AD_UNIT_ID,
+    ios: IOS_BANNER_AD_UNIT_ID,
+    android: ANDROID_BANNER_AD_UNIT_ID,
 }) ?? "";
 
 // This component displays a summary of heat records after a session ends
 const HeatSummary = () => {
 
-    // Create a reference to the interstitial ad
-    const interstitialRef = useRef(
-        InterstitialAd.createForAdRequest(adUnitId)
-    ).current;
-    const [adLoaded, setAdLoaded] = useState(false);
+    // AdMob Banner Ad configuration
+    const bannerRef = useRef<BannerAd>(null);
+    useForeground(() => {
+        Platform.OS === 'ios' && bannerRef.current?.load();
+    });
 
     const router = useRouter();
-
-    // Assign ad event listeners
-    useEffect(() => {
-        const unsubscribeLoaded = interstitialRef.addAdEventListener(AdEventType.LOADED, () => {
-            setAdLoaded(true);
-            console.log('Interstitial ad loaded');
-        });
-
-        const unsubscribeOpened = interstitialRef.addAdEventListener(AdEventType.OPENED, () => {
-            if (Platform.OS === 'ios') {
-                StatusBar.setHidden(true);
-            }
-        });
-
-        const unsubscribeClosed = interstitialRef.addAdEventListener(AdEventType.CLOSED, () => {
-            if (Platform.OS === 'ios') {
-                StatusBar.setHidden(false);
-            }
-
-            setAdLoaded(false);
-            router.replace("/");
-        });
-
-        // Start loading the interstitial straight away
-        interstitialRef.load();
-
-        // Unsubscribe from events on unmount
-        return () => {
-            unsubscribeLoaded();
-            unsubscribeOpened();
-            unsubscribeClosed();
-        };
-    }, []);
-
     const { baseStyle, colors } = useTheme();
     const { getStats } = useHeatRecordMethod();
     const stats = getStats();
 
-    // If the ad is loaded, show it when the home button is pressed
     const handleHomePressed = () => {
-        if (adLoaded) {
-            interstitialRef.show();
-        } else {
-            router.replace("/");
-        }
+        router.replace("/");
     };
 
     return (
@@ -81,7 +43,7 @@ const HeatSummary = () => {
             alignItems: "center",
             backgroundColor: colors.bgColor
         }}>
-            <Navbar title="Heat Check" subTitle="Summary" />
+            <Navbar title="Heat Date" subTitle="Summary" />
 
             <ScrollView
                 contentContainerStyle={{
@@ -89,6 +51,7 @@ const HeatSummary = () => {
                     justifyContent: "flex-start",
                     alignItems: "center",
                     backgroundColor: colors.bgColor,
+                    paddingBottom: 60, // Add padding to avoid content being hidden behind the ad
                 }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
@@ -158,6 +121,20 @@ const HeatSummary = () => {
                 />
 
             </ScrollView>
+
+            {/* Position the ad at the bottom of the screen */}
+            <View style={{
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
+                backgroundColor: colors.bgColor
+            }}>
+                <BannerAd
+                    ref={bannerRef}
+                    unitId={adUnitId ?? ""}
+                    size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+                />
+            </View>
         </View>
     );
 }

@@ -247,7 +247,7 @@ const CreateHeatRecord = () => {
                 position: "relative",
             }}
         >
-            <Navbar title="Heat Check" subTitle="Recording" />
+            <Navbar title="Heat Date" subTitle="Recording" />
 
             {/* Edit previous animal button overlaying navbar */}
             <TouchableOpacity
