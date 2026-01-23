@@ -10,7 +10,6 @@ import Svg, { Circle, Line, Text as SvgText } from "react-native-svg";
 
 
 // Admob Banner Ad ids per platform
-// TODO: Replace with actual banner ad unit IDs from AdMob console
 const ANDROID_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/3985014750";
 const IOS_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/7924259762";
 

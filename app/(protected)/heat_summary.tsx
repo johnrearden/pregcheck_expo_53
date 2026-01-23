@@ -9,7 +9,6 @@ import { Platform, ScrollView, Text, View } from "react-native";
 import { BannerAd, BannerAdSize, useForeground } from 'react-native-google-mobile-ads';
 
 // Admob Banner Ad ids per platform
-// TODO: Replace with actual banner ad unit IDs from AdMob console
 const ANDROID_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/3985014750";
 const IOS_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/7924259762";
 
