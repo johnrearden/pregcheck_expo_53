@@ -130,5 +130,39 @@ describe('DateOrDuration component', () => {
         expect(getByText('40 max!')).toBeTruthy();
     });
 
-    
+    it('converts decimal weeks to rounded days (2.5 weeks = 18 days)', () => {
+        const spy = jest.fn();
+        const { getByLabelText } = render(
+            <DateOrDuration {...makeProps({ durationUnit: 'weeks', onDurationChange: spy })} />,
+        );
+        fireEvent.changeText(getByLabelText('number-input'), '2.5');
+        expect(spy).toHaveBeenCalledWith(18); // 2.5 * 7 = 17.5, rounds to 18
+    });
+
+    it('converts decimal months to rounded days (1.5 months = 45 days)', () => {
+        const spy = jest.fn();
+        const { getByLabelText } = render(
+            <DateOrDuration {...makeProps({ durationUnit: 'months', onDurationChange: spy })} />,
+        );
+        fireEvent.changeText(getByLabelText('number-input'), '1.5');
+        expect(spy).toHaveBeenCalledWith(45); // 1.5 * 30 = 45
+    });
+
+    it('keeps days as integers (10.5 days = 10 days)', () => {
+        const spy = jest.fn();
+        const { getByLabelText } = render(
+            <DateOrDuration {...makeProps({ durationUnit: 'days', onDurationChange: spy })} />,
+        );
+        fireEvent.changeText(getByLabelText('number-input'), '10.5');
+        expect(spy).toHaveBeenCalledWith(10); // parseInt('10.5') = 10
+    });
+
+    it('handles small decimal weeks correctly (0.5 weeks = 4 days)', () => {
+        const spy = jest.fn();
+        const { getByLabelText } = render(
+            <DateOrDuration {...makeProps({ durationUnit: 'weeks', onDurationChange: spy })} />,
+        );
+        fireEvent.changeText(getByLabelText('number-input'), '0.5');
+        expect(spy).toHaveBeenCalledWith(4); // 0.5 * 7 = 3.5, rounds to 4
+    });
 });

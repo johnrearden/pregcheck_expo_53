@@ -10,6 +10,7 @@ import { api } from "@/services/ApiService";
 import { useToast } from '../hooks/useToast';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { HEAT_SESSION_KEY } from "@/constants/asyncStorageKeys";
+import { useNotification } from './NotificationContext';
 
 export const initialHeatRecord = {
     id: 0,
@@ -108,6 +109,9 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const showToast = useToast();
 
+    // Get notification context for rescheduling heat notifications
+    const { rescheduleHeatNotifications } = useNotification();
+
     // Set the initial state of the heat record list
     const [heatRecordList, setHeatRecordList] = useState<HeatRecordType[]>([]);
 
@@ -204,6 +208,10 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         // Reset the heat record to its initial state
         setHeatRecord(initialHeatRecord);
+
+        // Reschedule heat notifications after record changes
+        console.log('[HeatRecordContext] Triggering heat notification reschedule');
+        rescheduleHeatNotifications();
     }
 
     const handleFinished = async () => {
@@ -296,7 +304,6 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     console.error('[HeatRecordContext] Non-critical error sending heat email:', emailError);
                 }
 
-                showToast('Heat records synced successfully.', 'success');
             } else if (response.error) {
                 // Handle offline mode or other errors
                 if (response.offline) {
@@ -307,6 +314,10 @@ export const HeatRecordProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     showToast('Error creating session on server. Session saved locally.', 'error');
                 }
             }
+
+            // Reschedule heat notifications after session sync
+            console.log('[HeatRecordContext] Triggering heat notification reschedule after session sync');
+            rescheduleHeatNotifications();
 
             console.log('[HeatRecordContext] handleFinished completed successfully');
             return true;

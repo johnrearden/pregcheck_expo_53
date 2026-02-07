@@ -1,78 +1,31 @@
-import { View, Text, Dimensions, ScrollView, Platform,
-    StatusBar
- } from "react-native";
-import Navbar from "@/components/Navbar";
-import { useRouter } from "expo-router";
-import { useTheme } from "@/hooks/useTheme";
-import { usePersistRecord } from "@/contexts/RecordContext";
-import { BarChart } from "react-native-chart-kit";
 import Button from "@/components/Button";
+import Navbar from "@/components/Navbar";
 import YearCalendar from "@/components/YearCalendar";
-import { InterstitialAd, TestIds, AdEventType } from 'react-native-google-mobile-ads';
-import { useEffect, useRef, useState } from "react";
+import { usePersistRecord } from "@/contexts/RecordContext";
+import { useTheme } from "@/hooks/useTheme";
+import { useRouter } from "expo-router";
+import { useRef } from "react";
+import { Dimensions, Platform, ScrollView, Text, View } from "react-native";
+import { BarChart } from "react-native-chart-kit";
+import { BannerAd, BannerAdSize, useForeground } from 'react-native-google-mobile-ads';
 
 
-// Admob ids per platform
-const ANDROID_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-4741649534091227/5857862102";
-const IOS_INTERSTITIAL_AD_UNIT_ID     = "ca-app-pub-4741649534091227/8859655308";
-
-// For testing and development builds
-// const adUnitId = TestIds.INTERSTITIAL; 
-
-// For production builds, use the following line instead
+// Admob Banner Ad ids per platform
+const ANDROID_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/5298096424";
+const IOS_BANNER_AD_UNIT_ID = "ca-app-pub-4741649534091227/9153580959";
 const adUnitId = Platform.select({
-    ios: IOS_INTERSTITIAL_AD_UNIT_ID,
-    android: ANDROID_INTERSTITIAL_AD_UNIT_ID,
-}) || ""; // fallback to empty string to ensure type is always string
+    ios: IOS_BANNER_AD_UNIT_ID,
+    android: ANDROID_BANNER_AD_UNIT_ID,
+}) ?? "";
 
 
 const PregSummarySheepGoat = () => {
 
-    const interstitialRef = useRef(
-            InterstitialAd.createForAdRequest(adUnitId)
-        ).current;;
-        const [adLoaded, setAdLoaded] = useState(false);
-    
-    
-        // Assign ad event listeners
-        useEffect(() => {
-            const unsubscribeLoaded = interstitialRef.addAdEventListener(AdEventType.LOADED, () => {
-                setAdLoaded(true);
-                console.log('Interstitial ad loaded');
-            });
-    
-            const unsubscribeOpened = interstitialRef.addAdEventListener(AdEventType.OPENED, () => {
-                if (Platform.OS === 'ios') {
-                    // Prevent the close button from being unreachable by hiding the status bar on iOS
-                    StatusBar.setHidden(true);
-                }
-            });
-    
-            const unsubscribeClosed = interstitialRef.addAdEventListener(AdEventType.CLOSED, () => {
-                if (Platform.OS === 'ios') {
-                    StatusBar.setHidden(false);
-                }
-    
-                // Load the next interstitial ad
-                setAdLoaded(false);
-                router.replace("/");
-    
-    
-                // interstitialRef.load();
-            });
-    
-            // Start loading the interstitial straight away
-            interstitialRef.load();
-    
-            // Unsubscribe from events on unmount
-            return () => {
-                unsubscribeLoaded();
-                unsubscribeOpened();
-                unsubscribeClosed();
-            };
-    
-    
-        }, []);
+    // AdMob Banner Ad configuration
+    const bannerRef = useRef<BannerAd>(null);
+    useForeground(() => {
+        Platform.OS === 'ios' && bannerRef.current?.load();
+    });
 
     const router = useRouter();
     const screenWidth = Dimensions.get("window").width;
@@ -128,11 +81,7 @@ const PregSummarySheepGoat = () => {
 
 
     const handleHomePressed = () => {
-        if (adLoaded) {
-            interstitialRef.show();
-        } else {
-            router.replace("/");
-        }
+        router.replace("/");
     };
 
     return (
@@ -143,6 +92,7 @@ const PregSummarySheepGoat = () => {
                     flexGrow: 1,
                     justifyContent: "center",
                     alignItems: "center",
+                    paddingBottom: 60, // Add padding to avoid content being hidden behind the ad
                 }}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
@@ -206,6 +156,20 @@ const PregSummarySheepGoat = () => {
                     />
                 </View>
             </ScrollView>
+
+            {/* Position the ad at the bottom of the screen */}
+            <View style={{
+                position: 'absolute',
+                bottom: 0,
+                width: '100%',
+                backgroundColor: colors.bgColor
+            }}>
+                <BannerAd
+                    ref={bannerRef}
+                    unitId={adUnitId ?? ""}
+                    size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+                />
+            </View>
         </View >
     );
 }

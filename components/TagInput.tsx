@@ -1,6 +1,6 @@
-import { Text, View, TextInput, StyleSheet } from "react-native";
-import React, { forwardRef } from "react";
 import { useTheme } from "@/hooks/useTheme";
+import React, { forwardRef } from "react";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 export interface TagInputProps {
     tag: string;
@@ -29,7 +29,7 @@ const TagInput = forwardRef<TextInput, TagInputProps>((props, ref) => {
                         }
                     ]}
                 >
-                    Ear Tag
+                    Tag
                 </Text>
                 <View style={[styles.inputContainer, { width: '55%' }]}>
                     <TextInput

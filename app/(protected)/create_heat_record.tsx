@@ -247,7 +247,7 @@ const CreateHeatRecord = () => {
                 position: "relative",
             }}
         >
-            <Navbar title="Heat Check" subTitle="Recording" />
+            <Navbar title="Heat Date" subTitle="Recording" />
 
             {/* Edit previous animal button overlaying navbar */}
             <TouchableOpacity
@@ -384,16 +384,21 @@ const CreateHeatRecord = () => {
                             {showDatePicker && (
                                 Platform.OS === 'ios' ? (
                                     <View style={{
-                                        width: "100%",
-                                        paddingHorizontal: 20,
+                                        width: "90%",
+                                        alignSelf: "center",
                                         marginTop: 10,
+                                        backgroundColor: '#333',
+                                        borderRadius: 12,
+                                        padding: 16,
                                     }}>
                                         <DateTimePicker
                                             value={new Date(recordData.heat_date)}
                                             mode="date"
-                                            display="spinner"
+                                            display="inline"
                                             onChange={handleDateChange}
                                             maximumDate={new Date()}
+                                            accentColor="#4dd9d0"
+                                            themeVariant="dark"
                                             testID="heat-date-picker"
                                         />
                                         <Button
