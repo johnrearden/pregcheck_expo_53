@@ -1,9 +1,11 @@
 import CowHeadshotIcon from '@/assets/icons/CowHeadshotIcon';
 import Button from "@/components/Button";
+import HeatSettingsModal from '@/components/HeatSettingsModal';
 import ModalConfirm from '@/components/ModalConfirm';
 import Navbar from "@/components/Navbar";
 import TagInput from '@/components/TagInput';
 import { useHeatRecord, useHeatRecordMethod } from '@/contexts/HeatRecordContext';
+import { useNotificationSettings } from '@/contexts/NotificationSettingsContext';
 import { useRecordSync } from '@/contexts/RecordSyncContext';
 import { useTheme } from '@/hooks/useTheme';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -24,9 +26,6 @@ import {
     View
 } from 'react-native';
 
-// Default estrus cycle length for cattle (days)
-const ESTRUS_CYCLE_DAYS = 20;
-
 // Component for creating and editing heat records
 const CreateHeatRecord = () => {
 
@@ -34,6 +33,7 @@ const CreateHeatRecord = () => {
 
     const router = useRouter();
     const { isOnline } = useRecordSync();
+    const { settings } = useNotificationSettings();
 
     const heatRecord = useHeatRecord();
     const {
@@ -79,15 +79,16 @@ const CreateHeatRecord = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [editing, setEditing] = useState(!!tag);
     const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+    const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
     // Animations for success feedback
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const screenDarkAnim = useRef(new Animated.Value(0)).current;
 
-    // Calculate next heat date (heat_date + 21 days)
+    // Calculate next heat date (heat_date + cycle days)
     const calculateNextHeatDate = (heatDate: string): string => {
         const date = new Date(heatDate);
-        date.setDate(date.getDate() + ESTRUS_CYCLE_DAYS);
+        date.setDate(date.getDate() + settings.heatNotificationInterval);
         return date.toISOString().split('T')[0];
     };
 
@@ -453,13 +454,45 @@ const CreateHeatRecord = () => {
                                 </Text>
                             </View>
 
+                            {/* Cycle days interval indicator */}
+                            <TouchableOpacity
+                                onPress={() => setSettingsModalVisible(true)}
+                                style={{
+                                    width: "100%",
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    justifyContent: "flex-start",
+                                    marginTop: 10,
+                                }}
+                                testID="heat-cycle-days-row"
+                            >
+                                <View style={{ width: "40%" }} />
+                                <View style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 6,
+                                }}>
+                                    <Text style={{
+                                        color: colors.fgColor,
+                                        fontSize: 14,
+                                    }}>
+                                        + {settings.heatNotificationInterval} days
+                                    </Text>
+                                    <MaterialIcons
+                                        name="settings"
+                                        size={18}
+                                        color={colors.thrdColor}
+                                    />
+                                </View>
+                            </TouchableOpacity>
+
                             {/* Next heat date display */}
                             <View style={{
                                 width: "100%",
                                 flexDirection: "row",
                                 alignItems: "center",
                                 justifyContent: "flex-start",
-                                marginTop: 20,
+                                marginTop: 10,
                             }}>
                                 <Text
                                     style={[
@@ -560,6 +593,12 @@ const CreateHeatRecord = () => {
                                 onConfirm={handleFinishClicked}
                                 onCancel={() => setConfirmModalVisible(false)}
                                 modalVisible={confirmModalVisible}
+                            />
+
+                            {/* Heat settings modal */}
+                            <HeatSettingsModal
+                                visible={settingsModalVisible}
+                                onClose={() => setSettingsModalVisible(false)}
                             />
 
 
