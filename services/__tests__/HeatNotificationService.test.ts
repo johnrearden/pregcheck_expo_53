@@ -50,6 +50,13 @@ const getFutureDate = (daysFromNow: number): string => {
     return date.toISOString().split('T')[0];
 };
 
+// Helper to add days to a date string (matches service logic: parses as UTC midnight)
+const addDaysToDateStr = (dateStr: string, days: number): string => {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+};
+
 describe('HeatNotificationService', () => {
     describe('generateAllNotificationDates', () => {
         it('generates correct number of entries per record', () => {
@@ -69,10 +76,10 @@ describe('HeatNotificationService', () => {
 
             const entries = generateAllNotificationDates(records, 3, 20);
 
-            // Calculate expected dates
-            const expectedDate1 = getFutureDate(-5 + 20); // +20 days from heat
-            const expectedDate2 = getFutureDate(-5 + 40); // +40 days from heat
-            const expectedDate3 = getFutureDate(-5 + 60); // +60 days from heat
+            // Calculate expected dates from the heatDate string (avoids timezone drift)
+            const expectedDate1 = addDaysToDateStr(heatDate, 20);
+            const expectedDate2 = addDaysToDateStr(heatDate, 40);
+            const expectedDate3 = addDaysToDateStr(heatDate, 60);
 
             expect(entries[0].notificationDate).toBe(expectedDate1);
             expect(entries[1].notificationDate).toBe(expectedDate2);
@@ -134,8 +141,8 @@ describe('HeatNotificationService', () => {
             const entries = generateAllNotificationDates(records, 2, 21);
 
             // Day 21 and day 42 from heat date
-            const expectedDate1 = getFutureDate(-5 + 21);
-            const expectedDate2 = getFutureDate(-5 + 42);
+            const expectedDate1 = addDaysToDateStr(heatDate, 21);
+            const expectedDate2 = addDaysToDateStr(heatDate, 42);
 
             expect(entries[0].notificationDate).toBe(expectedDate1);
             expect(entries[1].notificationDate).toBe(expectedDate2);

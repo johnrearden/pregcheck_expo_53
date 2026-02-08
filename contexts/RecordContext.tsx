@@ -55,6 +55,7 @@ export interface PersistRecordContextType {
     recallRecord: (tag: string) => RecordType;
     createSession: (gestation_days: number) => void;
     handleFinished: () => void;
+    cancelSession: () => Promise<void>;
     getStats: () => any;
     checkDuplicateTag: (tag: string) => boolean;
     resetState: () => void;
@@ -86,6 +87,7 @@ export const PersistRecordContext = createContext<PersistRecordContextType>({
     recallRecord: () => initialRecord,
     createSession: (gestation_days: number) => { },
     handleFinished: () => { },
+    cancelSession: async () => { },
     getStats: () => ({
         total: 0,
         pregnant: 0,
@@ -549,7 +551,23 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setRecordList([]);
         resetStats();
     }
-    
+
+    // Cancel the current session without syncing to the server
+    const cancelSession = async () => {
+        console.log('[RecordContext] cancelSession called, sessionID:', sessionID);
+        try {
+            await AsyncStorage.removeItem(PREG_SESSION_KEY);
+            if (sessionID > 0) {
+                await removeEmptySession(db, sessionID);
+            }
+        } catch (error) {
+            console.error('[RecordContext] Error during cancelSession cleanup:', error);
+        }
+        setSessionRunning(false);
+        setSessionID(0);
+        resetState();
+        console.log('[RecordContext] Session cancelled successfully');
+    }
 
     return (
         <RecordContext.Provider value={record}>
@@ -560,6 +578,7 @@ export const RecordProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     recallRecord,
                     createSession,
                     handleFinished,
+                    cancelSession,
                     getStats: () => stats,
                     checkDuplicateTag,
                     resetState,

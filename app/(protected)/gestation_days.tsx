@@ -48,7 +48,7 @@ const GestationDays = () => {
 
     const router = useRouter();
     const record = useRecord();
-    const { persistRecord, createSession } = usePersistRecord();
+    const { persistRecord, createSession, cancelSession, isSessionRunning } = usePersistRecord();
     const { baseStyle, colors } = useTheme();
 
     const [gestationDays, setGestationDays] = useState(0);
@@ -94,6 +94,13 @@ const GestationDays = () => {
         } else {
             router.replace("/create_sheep_goat_record");
         }
+    }
+
+    const handleCancel = async () => {
+        if (isSessionRunning) {
+            await cancelSession();
+        }
+        router.replace('/');
     }
 
     let message = "Value ok";
@@ -315,14 +322,31 @@ const GestationDays = () => {
                             />
                         </View>
 
-                        <Button
-                            onPress={onNextClicked}
-                            title="Next"
-                            style={{ marginTop: 60, width: "50%", marginBottom: 20 }}
-                            outline={false}
-                            disabled={!gestationDaysValid}
-                            testID="next-button"
-                        />
+                        <View style={{
+                            flexDirection: "row",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            gap: 12,
+                            marginTop: 60,
+                            marginBottom: 20,
+                            width: "90%",
+                        }}>
+                            <Button
+                                onPress={handleCancel}
+                                title="Cancel"
+                                style={{ width: "45%" }}
+                                outline={true}
+                                testID="cancel-button"
+                            />
+                            <Button
+                                onPress={onNextClicked}
+                                title="Next"
+                                style={{ width: "45%" }}
+                                outline={false}
+                                disabled={!gestationDaysValid}
+                                testID="next-button"
+                            />
+                        </View>
                     </ScrollView>
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>

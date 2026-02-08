@@ -350,14 +350,14 @@ const Settings = () => {
                                 color: colors.fgColor,
                                 marginBottom: 8,
                             }}>
-                                Days Between Reminders
+                                Cycle Days
                             </Text>
                             <Text style={{
                                 fontSize: 12,
                                 color: colors.thrdColor,
                                 marginBottom: 8,
                             }}>
-                                Interval in days between each notification
+                                Length of the estrus cycle in days
                             </Text>
                             <View style={{
                                 flexDirection: 'row',
