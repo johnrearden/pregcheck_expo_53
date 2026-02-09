@@ -103,7 +103,9 @@ const Settings = () => {
 
     // Format scheduled time from trigger
     const getScheduledTime = (trigger: Notifications.NotificationTrigger | null): string => {
-        if (!trigger) return 'Unknown';
+        if (!trigger) return 'Unknown (null trigger)';
+        console.log('[Settings] Trigger object:', JSON.stringify(trigger, null, 2));
+        console.log('[Settings] Trigger keys:', Object.keys(trigger));
         // Android: Date triggers store the timestamp in 'value' property when retrieved
         if ('value' in trigger && typeof trigger.value === 'number') {
             const date = new Date(trigger.value);
@@ -121,7 +123,7 @@ const Settings = () => {
             const date = new Date(trigger.date as number | Date);
             return formatTime(date.getHours(), date.getMinutes());
         }
-        return 'Unknown';
+        return `Unknown (type: ${(trigger as any).type}, keys: ${Object.keys(trigger).join(',')})`;
     };
 
     const onLogoutClicked = () => {
