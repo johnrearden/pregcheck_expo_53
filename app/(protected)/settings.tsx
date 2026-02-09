@@ -103,15 +103,18 @@ const Settings = () => {
 
     // Format scheduled time from trigger
     const getScheduledTime = (trigger: Notifications.NotificationTrigger | null): string => {
-        if (!trigger) return 'Unknown (null trigger)';
-        console.log('[Settings] Trigger object:', JSON.stringify(trigger, null, 2));
-        console.log('[Settings] Trigger keys:', Object.keys(trigger));
+        if (!trigger) return 'Unknown';
         // Android: Date triggers store the timestamp in 'value' property when retrieved
         if ('value' in trigger && typeof trigger.value === 'number') {
             const date = new Date(trigger.value);
             return formatTime(date.getHours(), date.getMinutes());
         }
-        // iOS: Date triggers are converted to calendar triggers with dateComponents
+        // iOS: Date triggers are returned as timeInterval (seconds remaining until fire)
+        if ('seconds' in trigger && typeof (trigger as any).seconds === 'number') {
+            const date = new Date(Date.now() + (trigger as any).seconds * 1000);
+            return formatTime(date.getHours(), date.getMinutes());
+        }
+        // iOS: Calendar triggers with dateComponents
         if ('dateComponents' in trigger && trigger.dateComponents) {
             const { hour, minute } = trigger.dateComponents as { hour?: number; minute?: number };
             if (hour !== undefined && minute !== undefined) {
@@ -123,7 +126,7 @@ const Settings = () => {
             const date = new Date(trigger.date as number | Date);
             return formatTime(date.getHours(), date.getMinutes());
         }
-        return `Unknown (type: ${(trigger as any).type}, keys: ${Object.keys(trigger).join(',')})`;
+        return 'Unknown';
     };
 
     const onLogoutClicked = () => {
