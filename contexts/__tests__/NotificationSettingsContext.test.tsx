@@ -32,7 +32,7 @@ describe('NotificationSettingsContext', () => {
         it('has correct default values for all settings', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             expect(result.current.settings.heatNotificationsEnabled).toBe(false);
             expect(result.current.settings.notificationTime.hour).toBe(7);
@@ -54,7 +54,7 @@ describe('NotificationSettingsContext', () => {
 
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             // Should have defaults for missing fields
             expect(result.current.settings.heatNotificationCount).toBe(3);
@@ -76,7 +76,7 @@ describe('NotificationSettingsContext', () => {
 
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             expect(result.current.settings.heatNotificationsEnabled).toBe(true);
             expect(result.current.settings.notificationTime.hour).toBe(9);
@@ -90,7 +90,7 @@ describe('NotificationSettingsContext', () => {
         it('updates heatNotificationCount setting', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setHeatNotificationCount(5);
@@ -102,7 +102,7 @@ describe('NotificationSettingsContext', () => {
         it('persists heatNotificationCount to AsyncStorage', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setHeatNotificationCount(5);
@@ -119,7 +119,7 @@ describe('NotificationSettingsContext', () => {
         it('updates heatNotificationInterval setting', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setHeatNotificationInterval(21);
@@ -131,7 +131,7 @@ describe('NotificationSettingsContext', () => {
         it('persists heatNotificationInterval to AsyncStorage', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setHeatNotificationInterval(25);
@@ -148,7 +148,7 @@ describe('NotificationSettingsContext', () => {
         it('updates heatNotificationsEnabled setting', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setHeatNotificationsEnabled(true);
@@ -162,7 +162,7 @@ describe('NotificationSettingsContext', () => {
         it('updates notificationTime setting', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             await act(async () => {
                 await result.current.setNotificationTime({ hour: 10, minute: 45 });
@@ -185,7 +185,7 @@ describe('NotificationSettingsContext', () => {
         it('sets isLoading false after loading settings', async () => {
             const { result } = renderHook(() => useNotificationSettings(), { wrapper });
 
-            await waitFor(() => !result.current.isLoading);
+            await waitFor(() => expect(result.current.isLoading).toBe(false));
 
             expect(result.current.isLoading).toBe(false);
         });
