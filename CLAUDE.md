@@ -34,7 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - `eas build` or `eas submit` commands
    - These are reserved for human oversight due to production impact
 
-6. **Current Status**: App recently upgraded from Expo 52 → Expo 53 to comply with Google Play's 16 KB memory page size requirement (Nov 1, 2025 deadline). See `EXPO_53_DEPLOYMENT_STRATEGY.md` for deployment plan.
+6. **Current Status**: App upgraded from Expo 53 → Expo 54 so Android targets API 36 (Android 16), as Google Play requires. See `EXPO_54_UPGRADE.md`. (Earlier: Expo 52 → 53 for the 16 KB page size requirement, see `EXPO_53_DEPLOYMENT_STRATEGY.md`.)
 
 ### Before Making Any Changes:
 - Read `EXPO_53_DEPLOYMENT_STRATEGY.md` for deployment context
@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Pregcheck** is an offline-first React Native mobile application (Expo) for veterinarians and farm managers to record livestock pregnancy scan results and calf weight measurements. The app supports cattle, sheep, and goats with session-based workflows and server synchronization.
 
-**Tech Stack**: Expo 53, React Native 0.79.5, TypeScript, React 19, expo-sqlite, expo-router
+**Tech Stack**: Expo 54, React Native 0.81.5 (Legacy Architecture, `newArchEnabled: false`), TypeScript, React 19.1, expo-sqlite, expo-router 6. Android compileSdk/targetSdk 36.
 
 ## Development Commands
 
