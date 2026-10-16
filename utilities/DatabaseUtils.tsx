@@ -38,7 +38,11 @@ export const migrateDBifNeeded = async (db: SQLite.SQLiteDatabase) => {
         // Execute all DDL in a single batch to avoid lock contention
         // Setting WAL mode and creating tables in one execAsync call ensures atomicity
         console.log('[DatabaseUtils] Executing batched DDL statements...');
+        // busy_timeout must come first: if another connection still holds a lock
+        // (e.g. SQLiteProvider remounting while the previous connection closes),
+        // SQLite waits up to 5s instead of failing with "database is locked"
         await db.execAsync(`
+            PRAGMA busy_timeout = 5000;
             PRAGMA journal_mode = WAL;
 
             CREATE TABLE IF NOT EXISTS records (

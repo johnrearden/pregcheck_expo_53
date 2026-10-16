@@ -17,7 +17,7 @@ const SearchByTag = () => {
     const [tag, setTag] = useState<string>("");
     const [records, setRecords] = useState<any[]>([]);
     const [weightRecords, setWeightRecords] = useState<any[]>([]);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const router = useRouter();
 
     const handleTagChange = (value: string) => {
