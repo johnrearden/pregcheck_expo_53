@@ -92,8 +92,13 @@ android {
         applicationId 'com.intricatech.pregcheck'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
+<<<<<<< HEAD
         versionCode 33
         versionName "1.2.33"
+=======
+        versionCode 32
+        versionName "1.2.34"
+>>>>>>> a1f01eb7726931f2f81e8d0b486dbe7a7f4f2e7a
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
